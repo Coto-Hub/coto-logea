@@ -4,7 +4,6 @@ const io = require("socket.io")(httpServer, {
   path: '/mysocket',
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
   },
 });
 
