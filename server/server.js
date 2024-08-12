@@ -3,7 +3,7 @@ const httpServer = require("http").createServer();
 const io = require("socket.io")(httpServer, {
   path: '/mysocket',
   cors: {
-    origin: '*',
+    origin: '*:*',
   },
 });
 
