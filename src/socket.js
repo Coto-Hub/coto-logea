@@ -6,7 +6,7 @@ export const state = reactive({
     menus: [],
 });
 
-const URL = 'http://logea.coto-app.xyz:3005';
+const URL = 'https://logea.coto-app.xyz:3005';
 
 export const socket = io(URL, {
     path: '/mysocket'
