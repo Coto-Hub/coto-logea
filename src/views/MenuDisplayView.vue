@@ -7,7 +7,7 @@
           <Leaf class="left" />
           <Leaf class="right" />
         </div>
-        <div class="display-body">
+        <div class="display-body grandstander">
           <div class="midday">
             <div class="starter">
               <h2>Entrée</h2>
@@ -120,7 +120,7 @@ export default {
   @apply flex flex-col w-1/2 items-center text-center h-full relative;
 }
 .display .display-body > div > div {
-  @apply flex flex-col w-[50rem] h-[12rem] items-center mb-4;
+  @apply flex flex-col w-[50rem] h-[12rem] items-center mb-10;
 }
 .display .display-body .midday::after {
   @apply absolute top-[15%] bottom-[2.5%] w-2 bg-white/70 right-0 rounded-3xl;
@@ -130,10 +130,10 @@ export default {
   @apply text-7xl font-normal text-center mt-5;
 }
 .display .display-body h2 {
-  @apply text-5xl font-semibold px-2 pb-2 border-b-4 border-black mb-3;
+  @apply text-5xl font-medium px-2 pb-1 border-b-4 border-black mb-6;
 }
 .display .display-body p {
-  @apply text-3xl font-medium;
+  @apply text-4xl font-medium;
 }
 .display .display-header .left,
 .display .display-header .right {
