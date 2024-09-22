@@ -53,7 +53,18 @@ if (process.env.DATABASE) {
         });
     }
     else {
-        connectionMysql = await mysql.createConnection(dbServer);
+        connectionMysql = new Promise((resolve, reject) => {
+            const connection = mysql.createConnection({
+                ...dbServer,
+                database: process.env.DATABASE
+            });
+            connection.connect((error) => {
+                if (error) {
+                    reject(error);
+                }
+                resolve(connection);
+            });
+        });
     }
 
     function sql(query, values, callback) {
