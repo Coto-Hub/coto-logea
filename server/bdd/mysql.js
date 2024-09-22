@@ -53,7 +53,7 @@ if (process.env.DATABASE) {
         });
     }
     else {
-        connectionMysql = mysql.createConnection(dbServer);
+        connectionMysql = await mysql.createConnection(dbServer);
     }
 
     function sql(query, values, callback) {
