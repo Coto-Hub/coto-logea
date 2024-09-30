@@ -84,7 +84,7 @@ io.on("connection", async (socket) => {
         createAlert(socket, removeMenuData.alert.title, removeMenuData.alert.error);
       }
       else {
-        emitAllMenus();
+        emitAllMenus(socket.company.id);
       }
     }
     return;
@@ -98,7 +98,7 @@ io.on("connection", async (socket) => {
         createAlert(socket, newMenuData.alert.title, newMenuData.alert.error);
       }
       else {
-        emitAllMenus();
+        emitAllMenus(socket.company.id);
       }
     }
     return;
@@ -118,7 +118,7 @@ io.on("connection", async (socket) => {
         createAlert(socket, updateMenuData.alert.title, updateMenuData.alert.error);
       }
       else {
-        emitAllMenus();
+        emitAllMenus(socket.company.id);
       }
     }
     return;
@@ -141,7 +141,7 @@ io.on("connection", async (socket) => {
         }
       });
 
-      emitAllMenus();
+      emitAllMenus(socket.company.id);
     }
     return;
   });

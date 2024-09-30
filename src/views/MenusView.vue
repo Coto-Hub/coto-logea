@@ -109,7 +109,8 @@ export default {
     this.stringDate = this.formatDate(this.date);
     this.resetFormData();
 
-    socket.on("menus info", () => {
+    socket.on("menus info", ({ allMenus }) => {
+      console.log(allMenus);
       this.resetFormData();
     });
   },
@@ -119,6 +120,7 @@ export default {
   methods: {
     resetFormData() {
       const currentMenu = state.menus.find(e => this.date.isSame(e.date, 'day'));
+      console.log(currentMenu);
 
       if (currentMenu) {
         this.values.midday.starter = currentMenu.midday.starter;

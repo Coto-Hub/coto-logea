@@ -301,7 +301,6 @@ export default {
       return moment(this.resident.birthday).format('YYYY-MM-DD');
     },
     getSortContact() {
-      console.log(this.getResident.contacts);
       return this.getResident.contacts;
     }
   }
