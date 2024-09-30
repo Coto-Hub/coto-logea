@@ -125,6 +125,7 @@ module.exports = class Request {
       `;
       await this.connectionMysql.sql(query, [companyId, menu.date, menu.midday.starter, menu.midday.dish, menu.midday.dessert, menu.afternoon.starter, menu.afternoon.dish, menu.afternoon.dessert], async (result) => {
         if (result.error) {
+          console.log(result.error);
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la création du menu. Date:" + menu.date
