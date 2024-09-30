@@ -107,12 +107,11 @@ io.on("connection", async (socket) => {
   socket.on("update menu", async function (data) {
     if (data && socket.sessionID && socket.company) {
       let updateMenuData = null;
-
       if (JSON.stringify(data.midday) == JSON.stringify(data.afternoon) && data.midday.starter == "") {
-        updateMenuData = await menusRequest.removeMenu(data.id);
+        updateMenuData = await menusRequest.removeMenu(socket.company.id, data.id);
       }
       else {
-        updateMenuData = await menusRequest.updateMenu(data);
+        updateMenuData = await menusRequest.updateMenu(socket.company.id, data);
       }
 
       if (updateMenuData && updateMenuData.alert) {
@@ -135,7 +134,7 @@ io.on("connection", async (socket) => {
           }
         }
         else {
-          const updateMenuData = await menusRequest.updateMenu(menu);
+          const updateMenuData = await menusRequest.updateMenu(socket.company.id, menu);
           if (updateMenuData && updateMenuData.alert) {
             createAlert(socket, updateMenuData.alert.title, updateMenuData.alert.error);
           }
