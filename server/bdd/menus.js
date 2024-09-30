@@ -77,9 +77,9 @@ module.exports = class Request {
       const query = `
         UPDATE Menus
         SET Midday_starter = ?, Midday_dish = ?, Midday_dessert = ?, Afternoon_dessert = ?, Afternoon_dish = ?, Afternoon_dessert = ?
-        WHERE Id = ? AND Id_company = ?;
+        WHERE Day = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [menu.midday.starter, menu.midday.dish, menu.midday.dessert, menu.afternoon.starter, menu.afternoon.dish, menu.afternoon.dessert, menu.id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [menu.midday.starter, menu.midday.dish, menu.midday.dessert, menu.afternoon.starter, menu.afternoon.dish, menu.afternoon.dessert, menu.date, companyId], async (result) => {
         if (result.error) {
           info.alert = {
             title: 'Erreur',
@@ -91,16 +91,16 @@ module.exports = class Request {
     });
   }
 
-  async removeMenu(companyId, id) {
+  async removeMenu(companyId, date) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
         value: null,
       };
       const query = `
-        DELETE FROM Menus WHERE Id = ? AND Id_company = ?;
+        DELETE FROM Menus WHERE Day = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [date, companyId], async (result) => {
         if (result.error) {
           info.alert = {
             title: 'Erreur',

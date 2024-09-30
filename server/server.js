@@ -77,9 +77,9 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("remove menu", async function ({ id }) {
-    if (id && socket.sessionID && socket.company) {
-      const removeMenuData = await menusRequest.removeMenu(socket.company.id, id);
+  socket.on("remove menu", async function ({ date }) {
+    if (date && socket.sessionID && socket.company) {
+      const removeMenuData = await menusRequest.removeMenu(socket.company.id, date);
       if (removeMenuData && removeMenuData.alert) {
         createAlert(socket, removeMenuData.alert.title, removeMenuData.alert.error);
       }
@@ -108,7 +108,7 @@ io.on("connection", async (socket) => {
     if (data && socket.sessionID && socket.company) {
       let updateMenuData = null;
       if (JSON.stringify(data.midday) == JSON.stringify(data.afternoon) && data.midday.starter == "") {
-        updateMenuData = await menusRequest.removeMenu(socket.company.id, data.id);
+        updateMenuData = await menusRequest.removeMenu(socket.company.id, data.date);
       }
       else {
         updateMenuData = await menusRequest.updateMenu(socket.company.id, data);
