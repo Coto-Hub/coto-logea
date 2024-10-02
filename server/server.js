@@ -127,7 +127,7 @@ io.on("connection", async (socket) => {
   socket.on("add menus from file", async function ({ data }) {
     if (data && socket.sessionID && socket.company) {
       data.forEach(async menu => {
-        if (!menu.id) {
+        if (!menu.exist) {
           const newMenuData = await menusRequest.insertMenuInCompany(socket.company.id, menu);
           if (newMenuData && newMenuData.alert) {
             createAlert(socket, newMenuData.alert.title, newMenuData.alert.error);

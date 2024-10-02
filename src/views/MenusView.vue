@@ -167,8 +167,9 @@ export default {
           dessert: (this.getRow(object, `${letter}12`) + ` \n \n ` + this.getRow(object, `${letter}13`)).trim()
         };
         const menuExist = state.menus.find(e => date.isSame(e.date, 'day'));
+        console.log(menuExist);
         if (menuExist) {
-          returnObj[index].id = menuExist.id;
+          returnObj[index].exist = true;
         }
         date.add(1, 'days');
       }
