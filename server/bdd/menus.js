@@ -76,7 +76,7 @@ module.exports = class Request {
       };
       const query = `
         UPDATE Menus
-        SET Midday_starter = ?, Midday_dish = ?, Midday_dessert = ?, Afternoon_dessert = ?, Afternoon_dish = ?, Afternoon_dessert = ?
+        SET Midday_starter = ?, Midday_dish = ?, Midday_dessert = ?, Afternoon_starter = ?, Afternoon_dish = ?, Afternoon_dessert = ?
         WHERE Day = ? AND Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [menu.midday.starter, menu.midday.dish, menu.midday.dessert, menu.afternoon.starter, menu.afternoon.dish, menu.afternoon.dessert, menu.date, companyId], async (result) => {
