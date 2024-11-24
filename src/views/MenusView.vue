@@ -154,7 +154,6 @@ export default {
       var date = startDate;
       for (let index = 0; index < 7; index++) {
         const letter = String.fromCharCode(66 + index * 2);
-        returnObj[index].id = null;
         returnObj[index].date = date.format('YYYY-MM-DD');
         returnObj[index].midday = {
           starter: this.getRow(object, `${letter}4`),
@@ -166,8 +165,8 @@ export default {
           dish: (this.getRow(object, `${letter}10`) + ` \n \n ` + this.getRow(object, `${letter}11`)).trim(),
           dessert: (this.getRow(object, `${letter}12`) + ` \n \n ` + this.getRow(object, `${letter}13`)).trim()
         };
+        console.log(object);
         const menuExist = state.menus.find(e => date.isSame(e.date, 'day'));
-        console.log(menuExist);
         if (menuExist) {
           returnObj[index].exist = true;
         }
@@ -274,7 +273,7 @@ export default {
 
           fileReader.onload = e => {
             var wb = read(e.target.result);
-            socket.emit("add menus from file", { data: this.processXLSX(Object.keys(wb.Sheets)[0], startDate) });
+            socket.emit("add menus from file", { data: this.processXLSX(wb.Sheets[Object.keys(wb.Sheets)[0]], startDate) });
           };
           if (fileReader && files[0] && startDate) {
             fileReader.readAsArrayBuffer(files[0]);
