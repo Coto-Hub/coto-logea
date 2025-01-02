@@ -172,10 +172,6 @@ export default {
       &>h2 {
         @apply self-start ml-6 border-0 flex items-center mb-0;
 
-        @screen md {
-          @apply hidden;
-        }
-
         svg {
           @apply size-5 mx-1 mb-1;
         }

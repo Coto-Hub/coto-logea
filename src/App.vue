@@ -43,7 +43,7 @@ export default {
       <h1 class="font-semibold text-xl">{{ getCurrentName ?? "Villa" }}</h1>
       <nav class="nav-container">
         <RouterLink to="/">Home</RouterLink>
-        <RouterLink v-if="isConnected" to="/residents">Résidents</RouterLink>
+        <!-- <RouterLink v-if="isConnected" to="/residents">Résidents</RouterLink> -->
         <RouterLink v-if="isConnected" to="/menus">Menus</RouterLink>
       </nav>
     </div>
