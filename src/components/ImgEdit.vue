@@ -98,7 +98,7 @@ export default {
                 formData.append("file", blob, "canvas_image.png");
 
                 try {
-                    const response = await fetch("http://racing.coto-app.xyz/remove-background/", {
+                    const response = await fetch("https://racing.coto-app.xyz/remove-background/", {
                         method: "POST",
                         mode: "cors",
                         body: formData,
