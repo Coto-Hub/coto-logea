@@ -39,8 +39,8 @@
         </label>
       </div>
     </section>
-    <div class="menu-form">
-      <div class="menu-form-btn">
+    <div class="general-form">
+      <div class="general-form-btn">
         <button class="btn btn-cancel" :class="{ disabled: !formIsUpdate }" @click="cancelMenu">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
             stroke="currentColor" class="size-6">
@@ -56,7 +56,7 @@
           Valider
         </button>
       </div>
-      <div class="menu-form-date">
+      <div class="general-form-date">
         <button class="date-btn" @click="changeDate(-1)">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
             stroke="currentColor" class="size-6">
@@ -120,7 +120,6 @@ export default {
   methods: {
     resetFormData() {
       const currentMenu = state.menus.find(e => this.date.isSame(e.date, 'day'));
-      console.log(currentMenu);
 
       if (currentMenu) {
         this.values.midday.starter = currentMenu.midday.starter;
@@ -209,7 +208,7 @@ export default {
       }).fire({
         title: 'Importer un fichier',
         html: `
-            <div class="import-modal-container">
+            <div class="import-modal-container modal-container">
               <label for="import-file" id="label-import-file" class="btn btn-import">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
@@ -324,7 +323,7 @@ export default {
 };
 </script>
 
-<style>
+<style lang="scss">
 .import-part {
   @apply hidden;
 }
@@ -336,11 +335,10 @@ export default {
 .morning-input,
 .afternoon-input {
   @apply relative flex flex-col w-1/2 h-full space-y-3;
-}
 
-.morning-input label,
-.afternoon-input label {
-  @apply flex flex-col items-center w-full font-medium text-xl;
+  label {
+    @apply flex flex-col items-center w-full font-medium text-xl;
+  }
 }
 
 .general-input label textarea {
@@ -352,39 +350,7 @@ export default {
   content: '';
 }
 
-.menu-form {
-  @apply flex flex-col mt-2 space-y-3;
-}
-
-.menu-form-date {
-  @apply flex h-14 items-center w-full justify-around;
-}
-
-.menu-form-date input[type=date] {
-  @apply border-[3px] border-white bg-white/30 rounded-2xl text-xl font-medium px-3 py-1 outline-none w-48 select-none;
-}
-
-.menu-form-date .date-btn {
-  @apply border-4 border-white/70 rounded-full p-2;
-}
-
-.menu-form-date .date-btn:hover {
-  @apply bg-white/60;
-}
-
-.menu-form-date .date-btn svg {
-  @apply stroke-[3] stroke-black/80;
-}
-
 .general-input .btn-import {
   @apply absolute top-3 right-4;
-}
-
-.import-modal-container {
-  @apply flex flex-col space-y-6 items-center;
-}
-
-.import-modal-container label:not(.btn) {
-  @apply flex justify-around w-4/5 items-center font-medium;
 }
 </style>

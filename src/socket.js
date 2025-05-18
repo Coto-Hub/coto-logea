@@ -4,6 +4,7 @@ import CryptoJS from "crypto-js";
 import moment from "moment";
 
 export const state = reactive({
+    url: import.meta.env.VITE_URL,
     filter: {
         residents: {
             isActive: true,
@@ -14,12 +15,18 @@ export const state = reactive({
     },
     company: {},
     menus: [],
+    animations: [],
+    reccurences: [],
+    plannings: [],
     residents: [],
+    decorations: [],
+    month_configs: [],
+    week_configs: [],
 });
 
-const URL = `${import.meta.env.VITE_URL}`;
+// const URL = `${import.meta.env.VITE_URL}`;
 
-export const socket = io(URL, {
+export const socket = io(state.url, {
     path: '/mysocket'
 });
 
@@ -53,11 +60,55 @@ if (regex.test(window.location.pathname)) {
 
 socket.on("company info", ({ company }) => {
     state.company = company;
-    socket.emit("get menus", { id: company.id });
+    // socket.emit("get menus", { id: company.id });
 });
 
-socket.on("residents info", ({ allResidents }) => {
-    state.residents = allResidents;
+socket.on("animations info", ({ allAnimations }) => {
+    state.animations = allAnimations;
+    const animList = document.getElementById("update-anim-list");
+    if (animList) {
+        animList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("plannings info", ({ allPlannings }) => {
+    state.plannings = allPlannings;
+    const planningList = document.getElementById("update-planning-list");
+    if (planningList) {
+        planningList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("reccurences info", ({ allReccurences }) => {
+    state.reccurences = allReccurences;
+    const reccurenceList = document.getElementById("update-reccurence-list");
+    if (reccurenceList) {
+        reccurenceList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("decorations info", ({ allDecorations }) => {
+    state.decorations = allDecorations;
+    const decorationsList = document.getElementById("update-decorations");
+    if (decorationsList) {
+        decorationsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("config months info", ({ allMonthConfigs }) => {
+    state.month_configs = allMonthConfigs ?? [];
+    const allMonthConfigsList = document.getElementById("update-month-configs");
+    if (allMonthConfigsList) {
+        allMonthConfigsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("config weeks info", ({ allWeekConfigs }) => {
+    state.week_configs = allWeekConfigs ?? [];
+    const allWeekConfigsList = document.getElementById("update-week-configs");
+    if (allWeekConfigsList) {
+        allWeekConfigsList.dispatchEvent(new Event("update"));
+    }
 });
 
 socket.on("menus info", ({ allMenus }) => {

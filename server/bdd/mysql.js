@@ -37,7 +37,8 @@ if (process.env.DATABASE) {
                         const updatedDbServer = {
                             ...{
                                 ...dbServer,
-                                database: process.env.DATABASE
+                                database: process.env.DATABASE,
+                                multipleStatements: true,
                             },
                             stream
                         };

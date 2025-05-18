@@ -16,9 +16,9 @@ const router = createRouter({
       component: () => import('../views/MenusView.vue')
     },
     {
-      path: '/residents',
-      name: 'residents',
-      component: () => import('../views/ResidentsView.vue')
+      path: '/plannings',
+      name: 'plannings',
+      component: () => import('../views/PlanningsView.vue')
     },
     {
       path: '/menus/:id/today',
@@ -33,7 +33,6 @@ router.beforeEach(async (to) => {
   const authRequired = !publicPages.includes((to.matched && to.matched[0]) ? to.matched[0].path : to.path);
 
   if (authRequired && !(state.company && state.company.id)) {
-    // auth.returnUrl = to.fullPath;
     return '/';
   }
 });

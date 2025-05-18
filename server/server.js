@@ -1,5 +1,5 @@
 require("dotenv").config();
-const httpServer = require("http").createServer();
+const httpServer = require("http").createServer(httpHandler);
 var CryptoJS = require("crypto-js");
 
 const io = require("socket.io")(httpServer, {
@@ -10,17 +10,20 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
+const fs = require("fs");
 const crypto = require("crypto");
 const randomId = () => crypto.randomBytes(8).toString("hex");
 
 const connectionMysql = require("./bdd/mysql");
 const MenusRequest = require("./bdd/menus");
 const CompaniesRequest = require("./bdd/companies");
-const ResidentsRequest = require("./bdd/residents");
+const PlanningsRequest = require("./bdd/plannings");
+const path = require("path");
+const { emit } = require("process");
 
 const menusRequest = new MenusRequest(connectionMysql);
 const companiesRequest = new CompaniesRequest(connectionMysql);
-const residentsRequest = new ResidentsRequest(connectionMysql);
+const planningsRequest = new PlanningsRequest(connectionMysql);
 
 io.on("connection", async (socket) => {
   if (!socket.sessionID) {
@@ -124,6 +127,18 @@ io.on("connection", async (socket) => {
     return;
   });
 
+  socket.on("init animations planning", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const newAnimationPlanningData = await planningsRequest.initAnimationPlanning(socket.company.id, data);
+      if (newAnimationPlanningData && newAnimationPlanningData.alert) {
+        createAlert(socket, newAnimationPlanningData.alert.title, newAnimationPlanningData.alert.error);
+      }
+      else {
+        emitAllPlannings(socket.company.id);
+      }
+    }
+  });
+
   socket.on("add menus from file", async function ({ data }) {
     if (data && socket.sessionID && socket.company) {
       data.forEach(async menu => {
@@ -146,71 +161,395 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("add resident", async function (data) {
+  socket.on("add animation", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const newResidentData = await residentsRequest.insertResidentInCompany(socket.company.id, data);
+      if (data.icons.length) {
+        await data.icons.forEach(async icon => {
+          if (icon.src.startsWith("data:image")) {
+            try {
+              if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+                fs.mkdirSync(`./uploads/${socket.company.id}`);
+              }
+            } catch (err) {
+              console.error(err);
+            }
+            icon.path = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+            fs.writeFileSync(icon.path, Buffer.from(icon.src.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+          }
+        });
+      }
+      const newAnimationData = await planningsRequest.insertAnimation(socket.company.id, data);
 
-      if (newResidentData && newResidentData.alert) {
-        createAlert(socket, newResidentData.alert.title, newResidentData.alert.error);
+      if (newAnimationData && newAnimationData.alert) {
+        createAlert(socket, newAnimationData.alert.title, newAnimationData.alert.error);
       }
       else {
-        emitAllResidents(socket.company.id);
+        emitAllAnimations(socket.company.id);
       }
     }
     return;
   });
 
-  socket.on("update resident", async function (data) {
+  socket.on("add reccurence", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const updateResidentData = await residentsRequest.updateResident(socket.company.id, data);
+      const newReccurenceData = await planningsRequest.insertReccurenceAnimation(data);
 
-      if (updateResidentData && updateResidentData.alert) {
-        createAlert(socket, updateResidentData.alert.title, updateResidentData.alert.error);
+      if (newReccurenceData && newReccurenceData.alert) {
+        createAlert(socket, newReccurenceData.alert.title, newReccurenceData.alert.error);
       }
       else {
-        emitAllResidents(socket.company.id);
+        emitAllReccurences(socket.company.id);
       }
     }
     return;
   });
 
-  socket.on("update resident status", async function (data) {
+  socket.on("add animation planning", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const editResidentData = await residentsRequest.updateResidentStatus(socket.company.id, data.residentId, data.is_active);
-
-      if (editResidentData && editResidentData.alert) {
-        createAlert(socket, editResidentData.alert.title, editResidentData.alert.error);
+      const newAnimationPlanningData = await planningsRequest.insertAnimationPlanning(socket.company.id, data);
+      if (newAnimationPlanningData && newAnimationPlanningData.alert) {
+        createAlert(socket, newAnimationPlanningData.alert.title, newAnimationPlanningData.alert.error);
       }
       else {
-        emitAllResidents(socket.company.id);
+        emitAllPlannings(socket.company.id);
       }
     }
     return;
   });
 
-  socket.on("delete resident", async function (data) {
+  socket.on("add decoration", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const deleteResidentData = await residentsRequest.removeResident(socket.company.id, data.residentId);
+      if (data.iconId == null) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        data.path = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(data.path, Buffer.from(data.src.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
 
-      if (deleteResidentData && deleteResidentData.alert) {
-        createAlert(socket, deleteResidentData.alert.title, deleteResidentData.alert.error);
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, data);
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconId = newIconData.value;
+        }
+      }
+      const newDecorationData = await planningsRequest.insertDecoration(socket.company.id, data);
+      if (newDecorationData && newDecorationData.alert) {
+        createAlert(socket, newDecorationData.alert.title, newDecorationData.alert.error);
       }
       else {
-        emitAllResidents(socket.company.id);
+        emitAllDecorations(socket.company.id);
       }
     }
     return;
   });
 
-  socket.on("add contact", async function (data) {
-    if (data && socket.sessionID && socket.company && data.residentId) {
-      const newResidentData = await residentsRequest.insertResidentContact(data);
+  socket.on("add month config", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      if (data.iconLeft.path) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        const dataPath = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(dataPath, Buffer.from(data.iconLeft.path.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
 
-      if (newResidentData && newResidentData.alert) {
-        createAlert(socket, newResidentData.alert.title, newResidentData.alert.error);
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, {
+          label: "Déco",
+          path: dataPath,
+        });
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconLeft.id = newIconData.value;
+        }
+      }
+      if (data.iconRight.path) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        const dataPath = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(dataPath, Buffer.from(data.iconRight.path.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, {
+          label: "Déco",
+          path: dataPath,
+        });
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconRight.id = newIconData.value;
+        }
+      }
+      const newMonthConfigData = await planningsRequest.insertMonthConfig(socket.company.id, data);
+
+      if (newMonthConfigData && newMonthConfigData.alert) {
+        createAlert(socket, newMonthConfigData.alert.title, newMonthConfigData.alert.error);
       }
       else {
-        emitAllResidents(socket.company.id);
+        emitAllMonthConfigs(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("add week config", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const newWeekConfigData = await planningsRequest.insertWeekConfig(socket.company.id, data);
+
+      if (newWeekConfigData && newWeekConfigData.alert) {
+        createAlert(socket, newWeekConfigData.alert.title, newWeekConfigData.alert.error);
+      }
+      else {
+        emitAllWeekConfigs(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("edit animation", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      if (data.newIcons.length) {
+        await data.newIcons.forEach(async icon => {
+          if (icon.src.startsWith("data:image")) {
+            try {
+              if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+                fs.mkdirSync(`./uploads/${socket.company.id}`);
+              }
+            } catch (err) {
+              console.error(err);
+            }
+            icon.path = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+            fs.writeFileSync(icon.path, Buffer.from(icon.src.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+          }
+        });
+        const insertIconAnimationData = await planningsRequest.insertIconAnimation(data.id, data.newIcons);
+        if (insertIconAnimationData && insertIconAnimationData.alert) {
+          createAlert(socket, insertIconAnimationData.alert.title, insertIconAnimationData.alert.error);
+        }
+      }
+      if (data.removeIcons.length) {
+        const removeIconAnimationData = await planningsRequest.removeIconAnimation(socket.company.id, data.id, data.removeIcons);
+        if (removeIconAnimationData && removeIconAnimationData.alert) {
+          createAlert(socket, removeIconAnimationData.alert.title, removeIconAnimationData.alert.error);
+        }
+      }
+      if (data.label != data.lastLabel) {
+        const updateAnimationData = await planningsRequest.updateAnimation(socket.company.id, data);
+
+        if (updateAnimationData && updateAnimationData.alert) {
+          createAlert(socket, updateAnimationData.alert.title, updateAnimationData.alert.error);
+        }
+      }
+
+      emitAllAnimations(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit reccurence", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const updateReccurenceData = await planningsRequest.updateReccurence(socket.company.id, data);
+
+      if (updateReccurenceData && updateReccurenceData.alert) {
+        createAlert(socket, updateReccurenceData.alert.title, updateReccurenceData.alert.error);
+      }
+
+      emitAllReccurences(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit animation planning", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const updateAnimationPlanningData = await planningsRequest.updateAnimationPlanning(socket.company.id, data);
+
+      if (updateAnimationPlanningData && updateAnimationPlanningData.alert) {
+        createAlert(socket, updateAnimationPlanningData.alert.title, updateAnimationPlanningData.alert.error);
+      }
+
+      emitAllPlannings(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit decoration", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      if (data.iconId == null) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        data.path = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(data.path, Buffer.from(data.src.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, data);
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconId = newIconData.value;
+        }
+      }
+      const updateDecorationData = await planningsRequest.updateDecoration(socket.company.id, data);
+
+      if (updateDecorationData && updateDecorationData.alert) {
+        createAlert(socket, updateDecorationData.alert.title, updateDecorationData.alert.error);
+      }
+
+      emitAllDecorations(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit month config", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      if (data.iconLeft.path) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        const dataPath = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(dataPath, Buffer.from(data.iconLeft.path.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, {
+          label: "Déco",
+          path: dataPath,
+        });
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconLeft.id = newIconData.value;
+        }
+      }
+      if (data.iconRight.path) {
+        try {
+          if (!fs.existsSync(`./uploads/${socket.company.id}`)) {
+            fs.mkdirSync(`./uploads/${socket.company.id}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        const dataPath = `./uploads/${socket.company.id}/${randomId(14)}.png`;
+        fs.writeFileSync(dataPath, Buffer.from(data.iconRight.path.replace(/^data:image\/\w+;base64,/, ""), 'base64'));
+
+        const newIconData = await planningsRequest.insertIconDefault(socket.company.id, {
+          label: "Déco",
+          path: dataPath,
+        });
+        if (newIconData && newIconData.alert) {
+          createAlert(socket, newIconData.alert.title, newIconData.alert.error);
+          return;
+        }
+        else {
+          emitAllAnimations(socket.company.id);
+          data.iconRight.id = newIconData.value;
+        }
+      }
+      const updateMonthConfigData = await planningsRequest.updateMonthConfig(socket.company.id, data);
+
+      if (updateMonthConfigData && updateMonthConfigData.alert) {
+        createAlert(socket, updateMonthConfigData.alert.title, updateMonthConfigData.alert.error);
+      }
+
+      emitAllMonthConfigs(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit week config", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const updateWeekConfigData = await planningsRequest.updateWeekConfig(socket.company.id, data);
+
+      if (updateWeekConfigData && updateWeekConfigData.alert) {
+        createAlert(socket, updateWeekConfigData.alert.title, updateWeekConfigData.alert.error);
+      }
+
+      emitAllWeekConfigs(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("delete animation", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      const removeAnimationData = await planningsRequest.disabledAnimation(socket.company.id, id);
+      if (removeAnimationData && removeAnimationData.alert) {
+        createAlert(socket, removeAnimationData.alert.title, removeAnimationData.alert.error);
+      }
+      else {
+        emitAllAnimations(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("delete reccurence", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      const removeReccurenceData = await planningsRequest.removeReccurence(socket.company.id, id);
+      if (removeReccurenceData && removeReccurenceData.alert) {
+        createAlert(socket, removeReccurenceData.alert.title, removeReccurenceData.alert.error);
+      }
+      else {
+        emitAllReccurences(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("delete animation planning", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      const removeDecorationData = await planningsRequest.removeDecorationFromAnimation(socket.company.id, id);
+      const removeAnimationPlanningData = await planningsRequest.removeAnimationPlanning(socket.company.id, id);
+      if (removeAnimationPlanningData && removeAnimationPlanningData.alert) {
+        createAlert(socket, removeAnimationPlanningData.alert.title, removeAnimationPlanningData.alert.error);
+      }
+      else {
+        emitAllPlannings(socket.company.id);
+        emitAllDecorations(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("delete decoration", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      const removeDecorationData = await planningsRequest.removeDecoration(socket.company.id, id);
+      if (removeDecorationData && removeDecorationData.alert) {
+        createAlert(socket, removeDecorationData.alert.title, removeDecorationData.alert.error);
+      }
+      else {
+        emitAllDecorations(socket.company.id);
       }
     }
     return;
@@ -222,8 +561,14 @@ io.on("connection", async (socket) => {
       socket.company = requestCompany.value;
       socket.join(`admin-company:${id}`);
       socket.emit("company info", { company: requestCompany.value });
-      emitAllResidents(id);
+      // emitAllResidents(id);
       emitAllMenus(id);
+      emitAllAnimations(id);
+      emitAllReccurences(id);
+      emitAllPlannings(id);
+      emitAllDecorations(id);
+      emitAllMonthConfigs(id);
+      emitAllWeekConfigs(id);
 
       if (!isSession) {
         const currentDate = (new Date()).setHours(0, 0, 0, 0);
@@ -251,10 +596,45 @@ async function emitAllMenus(id) {
   }
 }
 
-async function emitAllResidents(id) {
-  const allResidents = await residentsRequest.getAllResidentsByCompany(id);
-  if (allResidents && allResidents.length) {
-    io.to(`admin-company:${id}`).emit("residents info", { allResidents });
+async function emitAllAnimations(id) {
+  const allAnimations = await planningsRequest.getAllAnimationsByCompany(id);
+  if (allAnimations && allAnimations.length) {
+    io.to(`admin-company:${id}`).emit("animations info", { allAnimations });
+  }
+}
+
+async function emitAllReccurences(id) {
+  const allReccurences = await planningsRequest.getAllReccurencesByCompany(id);
+  if (allReccurences && allReccurences.length) {
+    io.to(`admin-company:${id}`).emit("reccurences info", { allReccurences });
+  }
+}
+
+async function emitAllPlannings(id) {
+  const allPlannings = await planningsRequest.getAllPlanningsByCompany(id);
+  if (allPlannings && allPlannings.length) {
+    io.to(`admin-company:${id}`).emit("plannings info", { allPlannings });
+  }
+}
+
+async function emitAllDecorations(id) {
+  const allDecorations = await planningsRequest.getAllDecorationsByCompany(id);
+  if (allDecorations) {
+    io.to(`admin-company:${id}`).emit("decorations info", { allDecorations });
+  }
+}
+
+async function emitAllMonthConfigs(id) {
+  const allMonthConfigs = await planningsRequest.getAllMonthConfigByCompany(id);
+  if (allMonthConfigs && allMonthConfigs.length) {
+    io.to(`admin-company:${id}`).emit("config months info", { allMonthConfigs });
+  }
+}
+
+async function emitAllWeekConfigs(id) {
+  const allWeekConfigs = await planningsRequest.getAllWeekConfigByCompany(id);
+  if (allWeekConfigs && allWeekConfigs.length) {
+    io.to(`admin-company:${id}`).emit("config weeks info", { allWeekConfigs });
   }
 }
 
@@ -283,4 +663,19 @@ function decrypt(data) {
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
     })));
+}
+
+function httpHandler(req, res) {
+  fs.readFile(`.${req.url}`, function (err, data) {
+    if (err == null) {
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Access-Control-Allow-Origin': process.env.SERVER_CORS,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      });
+      res.write(data);
+      res.end();
+    }
+  });
 }

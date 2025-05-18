@@ -48,7 +48,7 @@ export default {
   </form>
 </template>
 
-<style>
+<style lang="scss">
 .login-container {
   @apply pb-6 max-w-md;
 }
