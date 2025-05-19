@@ -111,6 +111,14 @@ socket.on("config weeks info", ({ allWeekConfigs }) => {
     }
 });
 
+socket.on("residents info", ({ allResidents }) => {
+    state.residents = allResidents;
+    const residentsList = document.getElementById("update-residents");
+    if (residentsList) {
+        residentsList.dispatchEvent(new Event("update"));
+    }
+}
+
 socket.on("menus info", ({ allMenus }) => {
     state.menus = allMenus;
 });
