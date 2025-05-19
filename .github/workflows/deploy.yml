@@ -10,14 +10,29 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
-    - name: Restore upload cache
-      uses: actions/cache@v4
-      with:
-        path: server/uploads
-        key: uploads-${{ runner.os }}-${{ github.run_id }}
-        restore-keys: |
-          upload-${{ runner.os }}-
-          
+
+    - name: Préparer dossier persistant
+      run: |
+        UPLOAD_SRC="server/uploads"
+        UPLOAD_DEST="/home/runner/uploads"
+
+        # Si le dossier de destination n'existe pas encore, on migre l'existant
+        if [ ! -d "$UPLOAD_DEST" ]; then
+          echo "Création de $UPLOAD_DEST depuis $UPLOAD_SRC"
+          mkdir -p $(dirname "$UPLOAD_DEST")
+          mv "$UPLOAD_SRC" "$UPLOAD_DEST"
+        fi
+
+        # Supprimer l'ancien dossier s'il existe et n'est pas déjà un lien
+        if [ -d "$UPLOAD_SRC" ] && [ ! -L "$UPLOAD_SRC" ]; then
+          rm -rf "$UPLOAD_SRC"
+        fi
+
+        # Créer le lien symbolique s'il n'existe pas encore
+        if [ ! -L "$UPLOAD_SRC" ]; then
+          ln -s "$UPLOAD_DEST" "$UPLOAD_SRC"
+        fi
+        
     - name: 'Create .env file'
       run: |
         echo '${{ secrets.APP_ENV_FILE }}' > .env
