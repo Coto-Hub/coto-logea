@@ -117,7 +117,7 @@ socket.on("residents info", ({ allResidents }) => {
     if (residentsList) {
         residentsList.dispatchEvent(new Event("update"));
     }
-}
+});
 
 socket.on("menus info", ({ allMenus }) => {
     state.menus = allMenus;
