@@ -119,6 +119,14 @@ socket.on("residents info", ({ allResidents }) => {
     }
 });
 
+socket.on("kind meals info", ({ allKindMeals }) => {
+    state.kindMeals = allKindMeals;
+    const kindMealsList = document.getElementById("update-kind-meals");
+    if (kindMealsList) {
+        kindMealsList.dispatchEvent(new Event("update"));
+    }
+});
+
 socket.on("menus info", ({ allMenus }) => {
     state.menus = allMenus;
 });
