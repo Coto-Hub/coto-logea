@@ -909,7 +909,16 @@ export default {
     customiseImgModal(container, image) {
       this.editImg.container = container;
       this.editImg.callbackClose = () => {
-        this.editImg.container.remove();
+        if (this.editImg.container.id != "imported-icon") {
+          this.editImg.container.remove();
+        }
+        else {
+          document.getElementById('label-import-icon').classList.remove('active');
+          document.getElementById('none-icon').classList.add('active');
+          document.getElementById('imported-icon').src = "";
+          document.getElementById('imported-icon').dataset.src = "";
+          // this.editImg.container.remove();
+        }
         this.resetImgModal();
       };
       this.editImg.callbackConfirm = (img) => {

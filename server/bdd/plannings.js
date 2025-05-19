@@ -1,4 +1,4 @@
-module.exports = class ResidentsRequest {
+module.exports = class PlanningsRequest {
   constructor(connectionMysql) {
     this.connectionMysql = connectionMysql;
   }

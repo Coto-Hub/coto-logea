@@ -684,12 +684,12 @@ export default {
                 @apply flex flex-col items-center justify-around w-full overflow-hidden pt-2.5 flex-none;
 
                 .anim {
-                    @apply flex items-center px-1;
+                    @apply flex items-center px-1 font-medium;
                     font-size: 0.9rem;
                     line-height: 1.5rem;
 
                     .hour {
-                        @apply mr-1.5 font-medium;
+                        @apply mr-1.5 font-bold;
                     }
 
                     .content {

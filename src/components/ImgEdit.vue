@@ -168,7 +168,7 @@ export default {
         @apply flex flex-col items-center justify-center w-1/2 p-4 max-h-[50%];
 
         canvas {
-            @apply max-w-full h-full object-contain border-4 border-black bg-red-100;
+            @apply max-w-full max-h-44 h-full object-contain border-4 border-black bg-red-100;
         }
 
         .choice-container {

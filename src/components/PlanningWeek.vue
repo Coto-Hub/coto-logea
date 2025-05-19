@@ -389,7 +389,7 @@ export default {
                             @apply flex flex-col justify-center space-y-3 h-full p-1 text-left text-base tracking-wide;
 
                             .anim {
-                                @apply flex items-center text-nowrap;
+                                @apply flex items-center text-nowrap font-medium;
 
                                 .hour {
                                     @apply font-semibold pr-1;
