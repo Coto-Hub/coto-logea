@@ -203,7 +203,7 @@ export default {
                         </div>
                         ${defaultIcons.map(icon => `
                             <div class="icon-container" data-id="${icon.id}" data-animation-id="${icon.animationId}">
-                                <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" />
+                                <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" loading="lazy" />
                             </div>
                         `).join('')}
                     </div>
@@ -417,7 +417,7 @@ export default {
                 <div class="icon-left">
                     <label class="icon-label" @click="changeIcon('left')">
                         <div class="img-icon-container">
-                            <img v-if="showIcons.left" :src="showIcons.left" alt="Icône de gauche" />
+                            <img v-if="showIcons.left" :src="showIcons.left" alt="Icône de gauche" loading="lazy" />
                         </div>
                         <IconImg />
                     </label>
@@ -429,7 +429,7 @@ export default {
                 <div class="icon-right">
                     <label class="icon-label" @click="changeIcon('right')">
                         <div class="img-icon-container">
-                            <img v-if="showIcons.right" :src="showIcons.right" alt="Icône de gauche" />
+                            <img v-if="showIcons.right" :src="showIcons.right" alt="Icône de gauche" loading="lazy" />
                             <IconImg />
                         </div>
                     </label>
@@ -480,7 +480,8 @@ export default {
                                     <div class="decoration-container justify-center"
                                         :data-nb="`${getAnimationsPlanning(day.date).length}`"
                                         v-if="getDecoration(day.date, 1)">
-                                        <img :src="getBase64Img(getDecoration(day.date, 1).icon)" alt="decoration" />
+                                        <img :src="getBase64Img(getDecoration(day.date, 1).icon)" alt="decoration"
+                                            loading="lazy" />
                                     </div>
                                     <div class="anim-list" :class="{ 'custom': getCustomPlanning(day.date) }"
                                         :data-nb="`${getAnimationsPlanning(day.date).length}`">
@@ -497,7 +498,8 @@ export default {
                                         :data-nb="`${getAnimationsPlanning(day.date).length}`"
                                         :class="`${getCustomPlanning(day.date) ? 'justify-center' : 'justify-end px-6'}`"
                                         v-if="getDecoration(day.date, 2)">
-                                        <img :src="getBase64Img(getDecoration(day.date, 2).icon)" alt="decoration" />
+                                        <img :src="getBase64Img(getDecoration(day.date, 2).icon)" alt="decoration"
+                                            loading="lazy" />
                                     </div>
                                 </div>
                             </td>

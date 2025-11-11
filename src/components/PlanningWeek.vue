@@ -246,39 +246,41 @@ export default {
                             <td :colspan="(index >= 5 || day.custom) ? 2 : 1">
                                 <div class="flex w-full h-full" :class="{ 'custom-container': day.custom }">
                                     <div class="anim-list anim-am" v-if="!day.custom">
-                                        <div class="anim"
+                                        <p v-html="(index < 5 ? day.am : day.am.concat(day.pm)).map((e) => `<span class='hour'>${e.hour}:</span>
+                                            ${e.content}`).join('<br>')">
+                                        </p>
+                                        <!-- <div class="anim"
                                             v-for="element in (index < 5 ? day.am : day.am.concat(day.pm))"
                                             :key="element.id">
                                             <p class="content" :class="{ 'custom-wrap': element.content.length > 18 }">
                                                 <span class="hour">{{ element.hour }}:</span>
                                                 {{ element.content }}
                                             </p>
-                                        </div>
+                                        </div> -->
                                     </div>
                                     <div class="icon-container"
                                         v-if="day.icons.length && day.icons.find(i => i.placement == 1)">
-                                        <img :src="day.icons.find(i => i.placement == 1).iconPath" alt="decoration" />
+                                        <img :src="day.icons.find(i => i.placement == 1).iconPath" alt="decoration"
+                                            loading="lazy" />
                                     </div>
                                     <div class="custom" v-if="day.custom">
                                         <p class="content">{{ day.custom.content }}</p>
                                     </div>
                                     <div class="icon-container"
                                         v-if="(day.custom || index >= 5) && day.icons.length && day.icons.find(i => i.placement == 2)">
-                                        <img :src="day.icons.find(i => i.placement == 2).iconPath" alt="decoration" />
+                                        <img :src="day.icons.find(i => i.placement == 2).iconPath" alt="decoration"
+                                            loading="lazy" />
                                     </div>
                                 </div>
                             </td>
                             <td v-if="(index < 5 && !day.custom)">
                                 <div class="flex w-full h-full">
                                     <div class="anim-list anim-pm">
-                                        <div class="anim" v-for="element in day.pm" :key="element.id">
-                                            <p class="content"><span class="hour">{{ element.hour }}:</span>{{
-                                                element.content }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="icon-container"
-                                        v-if="day.icons.length && day.icons.find(i => i.placement == 2)">
-                                        <img :src="day.icons.find(i => i.placement == 2).iconPath" alt="decoration" />
+                                        <p
+                                            v-html="day.pm.map((e) => `<span class='hour'>${e.hour}:</span>
+                                            ${e.content}`).join('<br>') +
+                                                (day.icons.length && day.icons.find(i => i.placement == 2) ? `<img class='icon' src='${day.icons.find(i => i.placement == 2).iconPath}' alt='decoration' loading='lazy' />` : '')">
+                                        </p>
                                     </div>
                                 </div>
                             </td>
@@ -352,6 +354,7 @@ export default {
 
             tr td {
                 height: calc(100% / 7) !important;
+                max-height: calc(100% / 7) !important;
             }
 
             tr {
@@ -363,6 +366,14 @@ export default {
 
                 td {
                     width: calc(80% / 2);
+
+                    .anim-list {
+                        @apply w-full;
+
+                        .content {
+                            @apply w-full text-wrap;
+                        }
+                    }
 
                     &:first-child {
                         @apply w-[20%];
@@ -386,13 +397,27 @@ export default {
                         @apply h-full;
 
                         .anim-list {
-                            @apply flex flex-col justify-center space-y-3 h-full p-1 text-left text-base tracking-wide;
+                            @apply h-full p-1 text-base tracking-wide overflow-hidden max-h-full flex items-center;
 
-                            .anim {
-                                @apply flex items-center text-nowrap font-medium;
+                            p {
+                                @apply w-full leading-6;
 
                                 .hour {
                                     @apply font-semibold pr-1;
+                                }
+
+                                .icon {
+                                    @apply float-right max-w-11 max-h-11 mt-1;
+                                }
+
+                                span~span {
+                                    ~.icon {
+                                        @apply -mt-4;
+                                    }
+
+                                    ~span~.icon {
+                                        @apply -mt-6;
+                                    }
                                 }
                             }
                         }
@@ -409,14 +434,6 @@ export default {
                             }
                         }
 
-                        .icon-container {
-                            @apply flex items-center justify-center self-end w-full max-h-[6vh] mb-4 mr-1;
-
-                            img {
-                                @apply object-contain object-bottom h-full w-full max-w-[90%];
-                            }
-                        }
-
                         .custom-container {
                             @apply text-xl;
                             font-family: "Lazy Dog Regular";
@@ -429,6 +446,10 @@ export default {
                                 }
                             }
                         }
+
+                        .icon-container {
+                            @apply max-w-24 self-center;
+                        }
                     }
                 }
 
@@ -437,10 +458,14 @@ export default {
                     td {
                         .anim-list {
                             @apply w-auto;
+
+                            p {
+                                @apply leading-8;
+                            }
                         }
 
                         .icon-container {
-                            @apply max-w-none w-full items-center self-center mb-0;
+                            @apply flex flex-col max-w-none w-1/2 items-center self-center mb-0;
 
                             img {
                                 @apply w-auto object-center max-h-[8vh] max-w-[90%];

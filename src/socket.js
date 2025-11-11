@@ -5,23 +5,19 @@ import moment from "moment";
 
 export const state = reactive({
     url: import.meta.env.VITE_URL,
-    filter: {
-        residents: {
-            isActive: true,
-            floors: [],
-            isBirthday: false,
-            order: 'default',
-        },
-    },
     company: {},
     menus: [],
     animations: [],
     reccurences: [],
     plannings: [],
-    residents: [],
     decorations: [],
     month_configs: [],
     week_configs: [],
+    userMealConfigs: [],
+    kindMeals: [],
+    users: [],
+    guests: [],
+    userEvents: [],
 });
 
 // const URL = `${import.meta.env.VITE_URL}`;
@@ -31,6 +27,9 @@ export const socket = io(state.url, {
 });
 
 socket.connect();
+
+// TODO: change back the URL when in production
+// state.url = "https://logea.coto-app.xyz/";
 
 let sessionObjEncrypt = localStorage.getItem("sessionObj");
 const sessionObj = sessionObjEncrypt ? CryptoJS.AES.decrypt(sessionObjEncrypt, window.navigator.userAgent) : false;
@@ -111,19 +110,50 @@ socket.on("config weeks info", ({ allWeekConfigs }) => {
     }
 });
 
-socket.on("residents info", ({ allResidents }) => {
-    state.residents = allResidents;
-    const residentsList = document.getElementById("update-residents");
-    if (residentsList) {
-        residentsList.dispatchEvent(new Event("update"));
+socket.on("current add user", ({ id }) => {
+    const usersList = document.getElementById("update-user-list");
+    if (usersList) {
+        usersList.dataset.id = id;
+    }
+});
+
+socket.on("users info", ({ allUsers }) => {
+    state.users = allUsers;
+    const usersList = document.getElementById("update-user-list");
+    if (usersList) {
+        usersList.dispatchEvent(new Event("update"));
     }
 });
 
 socket.on("kind meals info", ({ allKindMeals }) => {
-    state.kindMeals = allKindMeals;
-    const kindMealsList = document.getElementById("update-kind-meals");
+    state.kindMeals = allKindMeals.sort((a, b) => a.order - b.order);
+    const kindMealsList = document.getElementById("update-meal-list");
     if (kindMealsList) {
         kindMealsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("user meal configs info", ({ allUserMealConfigs }) => {
+    state.userMealConfigs = allUserMealConfigs;
+    const userMealConfigsList = document.getElementById("update-user-meal-configs");
+    if (userMealConfigsList) {
+        userMealConfigsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("guests info", ({ allGuests }) => {
+    state.guests = allGuests;
+    const guestsList = document.getElementById("update-guests-list");
+    if (guestsList) {
+        guestsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("user events info", ({ allUserEvents }) => {
+    state.userEvents = allUserEvents;
+    const userEventsList = document.getElementById("update-user-events-list");
+    if (userEventsList) {
+        userEventsList.dispatchEvent(new Event("update"));
     }
 });
 

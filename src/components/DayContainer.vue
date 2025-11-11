@@ -59,7 +59,7 @@ export default {
             <div class="add-anim-day-modal-container modal-container">
               <div class="animation-search-input">
                 <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" />
-                <div class="animation-search-result">
+                <div class="search-result">
                   <ul id="update-anim-list">
                     ${state.animations.filter(a => a.isActive).map(a => `
                       <li data-id="${a.id}">
@@ -224,7 +224,7 @@ export default {
                 html: `
             <div class="custom-img-day-modal-container modal-container">
               <div class="img-upload-container ${current ? 'active' : ''}" id="img-upload-container" data-src="" data-name="">
-                <img id="current-img" src="${current && img ? state.url + img.path.replace('./', '/') : ''}" alt="image" />
+                <img id="current-img" src="${current && img ? state.url + img.path.replace('./', '/') : ''}" loading="lazy" alt="image" />
                 <label for="import-icon" id="label-import-icon" class="btn btn-import">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
@@ -319,7 +319,7 @@ export default {
                         </div>
                         ${defaultIcons.map(icon => `
                             <div class="icon-container" data-id="${icon.id}" data-animation-id="${icon.animationId}">
-                                <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" />
+                                <img src="${state.url}${icon.path.replace('./', '/')}" loading="lazy" alt="${icon.label}" />
                             </div>
                         `).join('')}
                     </div>
@@ -621,7 +621,7 @@ export default {
               </div>
               ${iconsChoice.map(icon => `
                 <div class="icon-container" data-id="${icon.id}" data-animation-id="${icon.animationId}">
-                  <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" />
+                  <img src="${state.url}${icon.path.replace('./', '/')}" loading="lazy" alt="${icon.label}" />
                 </div>
               `).join('')}
             </div>
@@ -861,7 +861,8 @@ export default {
         @click="getCustomPlanning(day.date) ? customPlanningModal(day.date, $event) : addAnimationPlanningModal(day.date)">
         <span :class="{ 'month': day.isCurrentMonth }">{{ day.day }}</span>
         <div class="decoration-container justify-center" v-if="getDecoration(day.date, 1)">
-            <img :src="getUrl + getDecoration(day.date, 1).icon.path.replace('./', '/')" alt="decoration" />
+            <img :src="getUrl + getDecoration(day.date, 1).icon.path.replace('./', '/')" alt="decoration"
+                loading="lazy" />
         </div>
         <div class="anim-list" :class="{ 'custom': getCustomPlanning(day.date) }">
             <div v-if="!getCustomPlanning(day.date)" class="anim" v-for="anim in getAnimationsPlanning(day.date)"
@@ -874,7 +875,8 @@ export default {
         </div>
         <div class="decoration-container" :class="getCustomPlanning(day.date) ? 'justify-center' : 'justify-end px-6'"
             v-if="getDecoration(day.date, 2)">
-            <img :src="getUrl + getDecoration(day.date, 2).icon.path.replace('./', '/')" alt="decoration" />
+            <img :src="getUrl + getDecoration(day.date, 2).icon.path.replace('./', '/')" alt="decoration"
+                loading="lazy" />
         </div>
         <div class="select">
             <IconEdit v-if="getAnimationsPlanning(day.date).length" @click="editPlanningModal(day.date, $event)" />

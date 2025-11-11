@@ -16,7 +16,7 @@ export default {
   },
   methods: {
     async Login() {
-      if (this.formIsValid) {
+      if (this.connectUser.login && this.connectUser.password) {
         socket.emit("company connect", { login: this.connectUser.login, password: this.connectUser.password });
       }
     }
@@ -44,7 +44,7 @@ export default {
           placeholder="Obligatoire" required autocomplete="false">
       </div>
     </div>
-    <input class="btn" :class="formIsValid ? '' : 'disabled'" name="login" type="submit" value="Se connecter">
+    <input class="btn" name="login" type="submit" value="Se connecter">
   </form>
 </template>
 

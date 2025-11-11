@@ -218,7 +218,7 @@ export default {
             <div class="add-reccurence-modal-container modal-container">
               <div class="animation-search-input">
                 <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" />
-                <div class="animation-search-result">
+                <div class="search-result">
                   <ul id="update-anim-list">
                     ${state.animations.filter(a => a.isActive).map(a => `
                       <li data-id="${a.id}">
@@ -411,7 +411,7 @@ export default {
                 <input type="file" id="import-icon" style="display: none" ref="fileInput" accept="image/*"/>
                 ${animation.icons.map(icon => `
                   <div class="icon-container can-delete" data-id="${icon.id}">
-                    <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" />
+                    <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" loading="lazy"/>
                     <p>${icon.label}</p>
                   </div>
                 `).join('')}
@@ -691,9 +691,9 @@ export default {
         title: 'Animations',
         html: `
             <div class="anim-modal-container modal-container">
-              <div class="anim-list-container">
-                <input type="text" id="input-search-list-animation" class="btn-input btn-anim" placeholder="Rechercher" />
-                <ul class="anim-list" id="update-anim-list">
+              <div class="default-list-container">
+                <input type="text" id="input-search-list-animation" class="btn-input btn-search" placeholder="Rechercher" />
+                <ul class="signle-list default-list" id="update-anim-list">
                   ${animlist}
                 </ul>
               </div>
@@ -754,9 +754,9 @@ export default {
         buttonsStyling: false,
         html: `
             <div class="reccurence-modal-container modal-container">
-              <div class="reccurence-list-container">
-                <input type="text" id="input-search-list-reccurence" class="btn-input btn-anim" placeholder="Rechercher" />
-                <ul class="reccurence-list" id="update-reccurence-list">
+              <div class="default-list-container">
+                <input type="text" id="input-search-list-reccurence" class="btn-input btn-search" placeholder="Rechercher" />
+                <ul class="reccurence-list default-list" id="update-reccurence-list">
                   ${reccurencelist}
                 </ul>
               </div>
@@ -821,7 +821,6 @@ export default {
       let listAnimations = [];
       const firstDay = this.weeks[0][0].date;
       const lastDay = this.weeks[this.weeks.length - 1][this.weeks[this.weeks.length - 1].length - 1].date;
-      console.log(lastDay);
       state.reccurences.map((r) => {
         const start = moment(firstDay).day(r.day).hour(r.time.split(':')[0]).minute(r.time.split(':')[1]);
         const end = moment(lastDay).day(r.day).hour(r.time.split(':')[0]).minute(r.time.split(':')[1]);
@@ -859,7 +858,7 @@ export default {
         `);
       })
       Swal.fire({
-        title: 'Récurrences',
+        title: 'Exporter',
         showCancelButton: false,
         confirmButtonText: 'Fermer',
         customClass: {
@@ -1136,200 +1135,4 @@ export default {
   </div>
 </template>
 
-<style lang="scss">
-.planning-container {
-  @apply px-0 pt-4 overflow-hidden;
-  height: calc(100% - 4rem);
-
-  h1 {
-    @apply pb-3;
-  }
-
-  .btn-container {
-    @apply absolute top-2 left-4 flex space-x-3;
-
-    &.right {
-      @apply left-auto right-4;
-    }
-  }
-
-  .general-input {
-    @apply flex w-full h-full border-y-4 border-white/60 relative;
-  }
-
-  .export-wait {
-    @apply absolute inset-0 bg-gray-500/30 hidden;
-
-    .svg-container {
-      @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 h-1/4;
-    }
-
-    svg {
-      @apply w-full h-full animate-spin stroke-gray-500/70;
-    }
-
-    &.active {
-      @apply flex;
-    }
-  }
-
-  @screen md {
-    @apply w-full;
-  }
-}
-
-.month-select-btn .select-items-container {
-  @apply w-full py-1 flex flex-col space-y-1 border-white border-4 transition-all duration-700 rounded-xl;
-
-  &>div {
-    @apply flex w-full justify-center items-center;
-  }
-
-  p {
-    @apply w-2/3 text-center;
-  }
-
-  svg {
-    @apply w-6 h-6 rounded-full cursor-pointer opacity-60;
-
-    &:hover {
-      @apply opacity-100;
-    }
-  }
-}
-
-.planning {
-  @apply absolute -inset-1;
-  width: calc(100% + 0.5rem);
-  height: calc(100% + 0.5rem);
-
-  .planning-head {
-    @apply h-14 w-full cursor-default;
-
-    tr {
-      @apply w-full;
-
-      th {
-        @apply text-center border-collapse border-4 border-white/30;
-      }
-    }
-  }
-
-  .planning-body {
-    @apply w-full;
-    height: calc(100% - 3.5rem);
-
-    tr {
-      @apply w-full h-auto;
-
-      td {
-        @apply relative text-center border-collapse border-4 border-white/30;
-        width: calc(100% / 7);
-      }
-    }
-  }
-
-  .day {
-    @apply inset-0 absolute flex flex-col justify-center items-center cursor-pointer py-2;
-
-    .decoration-container {
-      @apply h-8 w-full flex;
-
-      img {
-        // @apply h-full;
-        @apply object-contain;
-      }
-    }
-
-    .select {
-      @apply hidden;
-    }
-
-    &>span {
-      @apply absolute top-0 right-2 font-semibold text-black/30;
-
-      &.month {
-        @apply text-black/80;
-      }
-    }
-
-    &:hover .select {
-      @apply absolute inset-0 bg-black/5 flex items-center justify-center p-3;
-
-      svg {
-        @apply w-1/4 fill-green-600;
-
-        &.edit-icon,
-        &.img-icon,
-        &.paint-icon {
-          @apply w-7 stroke-blue-600 stroke-2 fill-none absolute top-1 left-1;
-
-          &:hover {
-            @apply stroke-blue-800;
-          }
-        }
-
-        &.img-icon,
-        &.paint-icon {
-          @apply left-auto right-1 top-auto bottom-1 stroke-gray-600 fill-black/20;
-
-          &:hover {
-            @apply stroke-gray-800;
-          }
-        }
-
-        &.paint-icon {
-          @apply right-auto left-1;
-        }
-      }
-
-      .custom .img-icon {
-        &:first-child {
-          @apply top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2;
-        }
-
-        &:last-child {
-          @apply bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2;
-        }
-      }
-    }
-
-    .anim-list {
-      @apply flex flex-col text-sm w-full justify-around items-center h-3/4;
-
-      .anim {
-        @apply flex space-x-1;
-
-        .hour {
-          @apply font-semibold mr-1;
-        }
-
-        .content {
-          @apply text-black/80;
-        }
-      }
-
-      &.custom {
-        @apply h-1/2 text-lg;
-      }
-    }
-  }
-}
-
-.planning-init {
-  @apply absolute inset-0 flex justify-center items-center bg-white/20;
-
-  .init-container {
-    @apply flex flex-col items-center space-y-3 bg-white rounded-xl p-4 font-medium;
-    @apply border-2 border-gray-200/30 shadow;
-
-    h2 {
-      @apply text-xl font-semibold;
-    }
-
-    .choice-container {
-      @apply flex space-x-4;
-    }
-  }
-}
-</style>
+<style lang="scss"></style>
