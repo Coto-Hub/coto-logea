@@ -61,9 +61,8 @@ module.exports = class PlanningsRequest {
     return new Promise(async (resolve) => {
       const Animations = [];
       const query = `
-        SELECT a.Id AS 'a_Id', a.Label AS 'a_Label', a.Is_active AS 'a_Is_active', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path'
-        FROM Animations a 
-        LEFT OUTER JOIN Icons i ON a.Id = i.Id_animation WHERE a.Id_company = ?;
+        SELECT a.Id AS 'a_Id', a.Label AS 'a_Label', a.Is_active AS 'a_Is_active'
+        FROM Animations a WHERE a.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
         if (result.rows && result.rows.length) {
@@ -76,17 +75,32 @@ module.exports = class PlanningsRequest {
                 isActive: row.a_Is_active
               });
             }
-            if (row.i_Id) {
-              const animation = Animations.find(r => r.id == row.a_Id);
-              animation.icons.push({
-                id: row.i_Id,
-                label: row.i_Label,
-                path: row.i_Path,
-              });
-            }
           });
         }
         resolve(Animations);
+      });
+    });
+  }
+
+  async getAllIconsByCompany(id) {
+    return new Promise(async (resolve) => {
+      const Icons = [];
+      const query = `
+        SELECT i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path', a.Id AS 'a_Id'
+        FROM Icons i, Animations a WHERE a.Id = i.Id_animation AND a.Id_company = ?;
+      `;
+      await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
+        if (result.rows && result.rows.length) {
+          result.rows.map((row) => {
+            Icons.push({
+              id: row.i_Id,
+              label: row.i_Label,
+              path: row.i_Path,
+              animationId: row.a_Id
+            });
+          });
+        }
+        resolve(Icons);
       });
     });
   }
@@ -386,6 +400,25 @@ module.exports = class PlanningsRequest {
       };
       const query = `DELETE FROM Decorations WHERE Id = ? AND Id_company = ?;`;
       await this.connectionMysql.sql(query, [id, companyId], async (result) => {
+        if (result.error) {
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression de la décoration."
+          };
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async removeDecorations(companyId, ids) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `DELETE FROM Decorations WHERE Id IN (?) AND Id_company = ?;`;
+      await this.connectionMysql.sql(query, [ids, companyId], async (result) => {
         if (result.error) {
           info.alert = {
             title: 'Erreur',

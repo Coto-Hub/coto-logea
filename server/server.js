@@ -397,7 +397,7 @@ io.on("connection", async (socket) => {
 
   socket.on("add guest", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const newGuest = await mealsRequest.insertGuestToUser(data.userId, data.nbGuests);
+      const newGuest = await mealsRequest.insertGuestToUser(socket.company.id, data.userId, data.label, data.nbGuests, data.isStaff);
 
       if (newGuest && newGuest.alert) {
         createAlert(socket, newGuest.alert.title, newGuest.alert.error);
@@ -649,13 +649,25 @@ io.on("connection", async (socket) => {
 
   socket.on("edit user meal config", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const updateUserMealConfigData = await mealsRequest.updateUserMealConfig(socket.company.id, data);
+      const updateUserMealConfigData = await mealsRequest.updateUserMealConfig(data);
 
       if (updateUserMealConfigData && updateUserMealConfigData.alert) {
         createAlert(socket, updateUserMealConfigData.alert.title, updateUserMealConfigData.alert.error);
       }
-
-      emitAllUserMealConfigs(socket.company.id);
+      else {
+        if (data.adedEntries && data.adedEntries.length) {
+          await mealsRequest.insertMealConfigToUserMealConfig(data.configId, data.adedEntries);
+        }
+        if (data.deletedEntries && data.deletedEntries.length) {
+          await mealsRequest.deleteMealConfig(data.configId, data.deletedEntries);
+        }
+        if (data.editedEntries && data.editedEntries.length) {
+          for (const entry of data.editedEntries) {
+            await mealsRequest.updateMealConfig(data.configId, entry);
+          }
+        }
+        emitAllUserMealConfigs(socket.company.id);
+      }
     }
     return;
   });
@@ -714,6 +726,20 @@ io.on("connection", async (socket) => {
     return;
   });
 
+  socket.on("delete decorations planning", async function (data) {
+    if (data != null && socket.sessionID && socket.company) {
+      const removeDecorationsData = await planningsRequest.removeDecorations(socket.company.id, data);
+      if (removeDecorationsData && removeDecorationsData.alert) {
+        createAlert(socket, removeDecorationsData.alert.title, removeDecorationsData.alert.error);
+      }
+      else {
+        emitAllPlannings(socket.company.id);
+        emitAllDecorations(socket.company.id);
+      }
+    }
+    return;
+  });
+
   socket.on("delete decoration", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
       const removeDecorationData = await planningsRequest.removeDecoration(socket.company.id, id);
@@ -727,11 +753,32 @@ io.on("connection", async (socket) => {
     return;
   });
 
+  socket.on("delete user with config", async function (data) {
+    if (data && data.id != null && socket.sessionID && socket.company) {
+      const stopConfigData = await mealsRequest.updateUserMealConfigEnd(data.id, data.date);
+      if (stopConfigData && stopConfigData.alert) {
+        createAlert(socket, stopConfigData.alert.title, stopConfigData.alert.error);
+      }
+      else {
+        emitAllUserMealConfigs(socket.company.id);
+        emitAllUsers(socket.company.id);
+      }
+      // const removeUserData = await mealsRequest.removeUser(socket.company.id, id);
+      // if (removeUserData && removeUserData.alert) {
+      //   createAlert(socket, removeUserData.alert.title, removeUserData.alert.error);
+      // }
+      // else {
+      //   emitAllUsers(socket.company.id);
+      // }
+    }
+    return;
+  });
+
   socket.on("delete user", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
-      const removeUserData = await mealsRequest.removeUser(socket.company.id, id);
-      if (removeUserData && removeUserData.alert) {
-        createAlert(socket, removeUserData.alert.title, removeUserData.alert.error);
+      const deleteUserData = await mealsRequest.deleteUser(socket.company.id, id);
+      if (deleteUserData && deleteUserData.alert) {
+        createAlert(socket, deleteUserData.alert.title, deleteUserData.alert.error);
       }
       else {
         emitAllUsers(socket.company.id);
@@ -740,9 +787,9 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("delete kind meal", async function (id) {
-    if (id != null && socket.sessionID && socket.company) {
-      const removeKindMealData = await mealsRequest.removeKindMeal(socket.company.id, id);
+  socket.on("delete kind meal", async function (data) {
+    if (data && data.id != null && socket.sessionID && socket.company) {
+      const removeKindMealData = await mealsRequest.deleteKindMeal(socket.company.id, data.date, data.id);
       if (removeKindMealData && removeKindMealData.alert) {
         createAlert(socket, removeKindMealData.alert.title, removeKindMealData.alert.error);
       }
@@ -761,6 +808,20 @@ io.on("connection", async (socket) => {
       }
       else {
         emitAllUserMealConfigs(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("delete user event meal", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      await mealsRequest.deleteUserEventEntries(id);
+      const removeUserEventConfigData = await mealsRequest.deleteUserEvent(id);
+      if (removeUserEventConfigData && removeUserEventConfigData.alert) {
+        createAlert(socket, removeUserEventConfigData.alert.title, removeUserEventConfigData.alert.error);
+      }
+      else {
+        emitAllUserEvents(socket.company.id);
       }
     }
     return;
@@ -826,9 +887,17 @@ async function emitAllMenus(id) {
 }
 
 async function emitAllAnimations(id) {
+  emitAllIcons(id);
   const allAnimations = await planningsRequest.getAllAnimationsByCompany(id);
   if (allAnimations && allAnimations.length) {
     io.to(`admin-company:${id}`).emit("animations info", { allAnimations });
+  }
+}
+
+async function emitAllIcons(id) {
+  const allIcons = await planningsRequest.getAllIconsByCompany(id);
+  if (allIcons && allIcons.length) {
+    io.to(`admin-company:${id}`).emit("icons info", { allIcons });
   }
 }
 

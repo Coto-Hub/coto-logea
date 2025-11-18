@@ -1,3 +1,5 @@
+const mysql = require('mysql2');
+
 module.exports = class MealsRequest {
   constructor(connectionMysql) {
     this.connectionMysql = connectionMysql;
@@ -7,7 +9,7 @@ module.exports = class MealsRequest {
     return new Promise(async (resolve) => {
       const KindMeals = [];
       const query = `
-        SELECT k.Id AS 'k_Id', k.Label AS 'k_Label', k.Can_delivery AS 'k_Can_delivery', k.Is_active AS 'k_Is_active', k.Is_staff AS 'k_Is_staff', k.Number AS 'k_Number'
+        SELECT k.Id AS 'k_Id', k.Label AS 'k_Label', k.Can_delivery AS 'k_Can_delivery', k.Is_staff AS 'k_Is_staff', k.Number AS 'k_Number', k.End_date AS 'k_End_date'
         FROM Kind_meals k WHERE k.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -17,9 +19,9 @@ module.exports = class MealsRequest {
               id: row.k_Id,
               label: row.k_Label,
               canDelivery: row.k_Can_delivery,
-              isActive: row.k_Is_active,
               isStaff: row.k_Is_staff,
               order: row.k_Number,
+              endDate: row.k_End_date,
             });
           });
         }
@@ -36,7 +38,7 @@ module.exports = class MealsRequest {
       };
       const query = `
         INSERT INTO Kind_meals (Id_company, Label, Can_delivery, Is_staff, Number)
-        VALUES (?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?);
       `;
       await this.connectionMysql.sql(query, [companyId, kindMeal.label, kindMeal.canDelivery, kindMeal.isStaff, kindMeal.order], (result) => {
         if (result.error) {
@@ -111,14 +113,18 @@ module.exports = class MealsRequest {
     });
   }
 
-  async deleteKindMeal(companyId, id) {
+  async deleteKindMeal(companyId, endDate, id) {
     return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
       const query = `
         UPDATE Kind_meals
-        SET Is_active = 0
+        SET End_date = ?
         WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [id, companyId], (result) => {
+      await this.connectionMysql.sql(query, [endDate, id, companyId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -138,7 +144,7 @@ module.exports = class MealsRequest {
     return new Promise(async (resolve) => {
       const users = [];
       const query = `
-        SELECT r.Id AS 'r_Id', r.Civility AS 'r_Civility', r.Lastname AS 'r_Lastname', r.Firstname AS 'r_Firstname', r.Created AS 'r_Created', r.Is_active AS 'r_Is_active', r.Is_staff AS 'r_Is_staff'
+        SELECT r.Id AS 'r_Id', r.Civility AS 'r_Civility', r.Lastname AS 'r_Lastname', r.Firstname AS 'r_Firstname', r.Created AS 'r_Created', r.Is_active AS 'r_Is_active', r.Is_staff AS 'r_Is_staff', r.Eating_area AS 'r_Eating_area'
         FROM Users r WHERE r.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -149,6 +155,7 @@ module.exports = class MealsRequest {
               civility: row.r_Civility,
               lastname: row.r_Lastname,
               firstname: row.r_Firstname,
+              eatingArea: row.r_Eating_area,
               created: row.r_Created,
               isStaff: row.r_Is_staff,
               isActive: row.r_Is_active,
@@ -167,10 +174,10 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Users (Id_company, Civility, Lastname, Firstname, Is_staff)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO Users (Id_company, Civility, Lastname, Firstname, Is_staff, Eating_area)
+        VALUES (?, ?, ?, ?, ?, ?);
       `;
-      await this.connectionMysql.sql(query, [companyId, user.civility, user.lastname, user.firstname, user.isStaff], (result) => {
+      await this.connectionMysql.sql(query, [companyId, user.civility, user.lastname, user.firstname, user.isStaff, user.eatingArea], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -194,10 +201,10 @@ module.exports = class MealsRequest {
       };
       const query = `
         UPDATE Users
-        SET Civility = ?, Lastname = ?, Firstname = ?
+        SET Civility = ?, Lastname = ?, Firstname = ?, Eating_area = ?
         WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [user.civility, user.lastname, user.firstname, user.id, companyId], (result) => {
+      await this.connectionMysql.sql(query, [user.civility, user.lastname, user.firstname, user.eatingArea, user.id, companyId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -215,10 +222,12 @@ module.exports = class MealsRequest {
 
   async deleteUser(companyId, id) {
     return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
       const query = `
-        UPDATE Users
-        SET Is_active = 0
-        WHERE Id = ? AND Id_company = ?;
+        DELETE FROM Users WHERE Id = ? AND Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [id, companyId], (result) => {
         if (result.error) {
@@ -315,10 +324,10 @@ module.exports = class MealsRequest {
       };
       const query = `
         UPDATE User_meal_configs
-        SET Date_start = ?, Date_end = ?
+        SET Date_start = ?
         WHERE Id = ?;
       `;
-      await this.connectionMysql.sql(query, [userMealConfig.dateStart, userMealConfig.dateEnd, userMealConfig.id], (result) => {
+      await this.connectionMysql.sql(query, [userMealConfig.dateStart, userMealConfig.configId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -334,7 +343,34 @@ module.exports = class MealsRequest {
     });
   }
 
-  async updateUserMealConfigEnd(userId, dataStart) {
+  async updateMealConfig(configId, config) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        UPDATE Meal_configs
+        SET Delivery = ?, Monday = ?, Tuesday = ?, Wednesday = ?, Thursday = ?, Friday = ?, Saturday = ?, Sunday = ?, Public_holiday = ?
+        WHERE Id_kind_meal = ? AND Id_user_meal_config = ?;
+      `;
+      await this.connectionMysql.sql(query, [config.delivery, config.monday, config.tuesday, config.wednesday, config.thursday, config.friday, config.saturday, config.sunday, config.publicHoliday, config.idKindMeal, configId], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la modification de la configuration de repas"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async updateUserMealConfigEnd(userId, date) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -345,7 +381,7 @@ module.exports = class MealsRequest {
         SET Date_end = ?
         WHERE Id_user = ? AND Date_end IS NULL;
       `;
-      await this.connectionMysql.sql(query, [dataStart, userId], (result) => {
+      await this.connectionMysql.sql(query, [date, userId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -419,34 +455,7 @@ module.exports = class MealsRequest {
     });
   }
 
-  async updateMealConfig(mealConfig) {
-    return new Promise(async (resolve) => {
-      const info = {
-        alert: null,
-        value: null,
-      };
-      const query = `
-        UPDATE Meal_configs
-        SET Delivery = ?, Monday = ?, Tuesday = ?, Wednesday = ?, Thursday = ?, Friday = ?, Saturday = ?, Sunday = ?, Public_holiday = ?
-        WHERE Id = ?;
-      `;
-      await this.connectionMysql.sql(query, [mealConfig.delivery, mealConfig.monday, mealConfig.tuesday, mealConfig.wednesday, mealConfig.thursday, mealConfig.friday, mealConfig.saturday, mealConfig.sunday, mealConfig.publicHoliday, mealConfig.id], (result) => {
-        if (result.error) {
-          console.log(result.error);
-          info.alert = {
-            title: 'Erreur',
-            error: "Une erreur est survenue lors de la modification de la configuration de repas"
-          };
-        }
-        if (result.rows) {
-          info.value = true;
-        }
-        resolve(info);
-      });
-    });
-  }
-
-  async deleteMealConfig(id) {
+  async deleteMealConfig(id, deletedIds) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -454,9 +463,9 @@ module.exports = class MealsRequest {
       };
       const query = `
         DELETE FROM Meal_configs
-        WHERE Id = ?;
+        WHERE Id_user_meal_config = ? AND Id_kind_meal IN (?);
       `;
-      await this.connectionMysql.sql(query, [id], (result) => {
+      await this.connectionMysql.sql(query, [id, deletedIds], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -472,17 +481,17 @@ module.exports = class MealsRequest {
     });
   }
 
-  async insertGuestToUser(userId, nbGuests) {
+  async insertGuestToUser(companyId, userId, label, nbGuests, isStaff) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
         value: null,
       };
       const query = `
-        INSERT INTO Guests (Id_user, Nb_guests)
-        VALUES (?, ?);
+        INSERT INTO Guests (Id_company, Id_user, Label, Nb_guests, Is_staff)
+        VALUES (?, ?, ?, ?, ?);
       `;
-      await this.connectionMysql.sql(query, [userId, nbGuests], (result) => {
+      await this.connectionMysql.sql(query, [companyId, userId, label, nbGuests, isStaff], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -558,13 +567,13 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Guest_entries (Id_guest, Id_kind_meal, Delivery, Date_start, Date_end)
+        INSERT INTO Guest_entries (Id_guest, Id_kind_meal, Date_start, Date_end)
         VALUES ?;
       `;
       const values = [];
       entries.map(
         (entry) => {
-          values.push([idGuest, entry.idKindMeal, entry.delivery, entry.dateStart, entry.dateEnd]);
+          values.push([idGuest, entry.idKindMeal, entry.dateStart, entry.dateEnd]);
         }
       );
       await this.connectionMysql.sql(query, [values], (result) => {
@@ -587,10 +596,10 @@ module.exports = class MealsRequest {
     return new Promise(async (resolve) => {
       const guests = [];
       const query = `
-        SELECT g.Id AS 'g_Id', g.Id_user AS 'g_Id_user', g.Nb_guests AS 'g_Nb_guests', g.Created AS 'g_Created', ge.Id AS 'ge_Id', ge.Id_kind_meal AS 'ge_Id_kind_meal', ge.Delivery AS 'ge_Delivery', ge.Date_start AS 'ge_Date_start', ge.Date_end AS 'ge_Date_end'
+        SELECT g.Id AS 'g_Id', g.Id_user AS 'g_Id_user', g.Label AS 'g_Label', g.Nb_guests AS 'g_Nb_guests', g.Is_staff AS 'g_Is_staff', g.Created AS 'g_Created', ge.Id AS 'ge_Id', ge.Id_kind_meal AS 'ge_Id_kind_meal', ge.Date_start AS 'ge_Date_start', ge.Date_end AS 'ge_Date_end'
         FROM Guests g
         LEFT JOIN Guest_entries ge ON ge.Id_guest = g.Id
-        WHERE g.Id_user IN (SELECT Id FROM Users WHERE Id_company = ?);
+        WHERE g.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
         if (result.rows && result.rows.length) {
@@ -598,9 +607,11 @@ module.exports = class MealsRequest {
             if (!guests.find((g) => g.id === row.g_Id)) {
               guests.push({
                 id: row.g_Id,
+                label: row.g_Label,
                 userId: row.g_Id_user,
                 nbGuests: row.g_Nb_guests,
                 elements: [],
+                isStaff: row.g_Is_staff,
                 created: row.g_Created ?? null,
               });
             }
@@ -609,7 +620,6 @@ module.exports = class MealsRequest {
               g.elements.push({
                 id: row.ge_Id,
                 idKindMeal: row.ge_Id_kind_meal,
-                delivery: row.ge_Delivery,
                 dateStart: row.ge_Date_start,
                 dateEnd: row.ge_Date_end,
               });
@@ -704,6 +714,31 @@ module.exports = class MealsRequest {
     });
   }
 
+  async deleteUserEventEntries(userEventId) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        DELETE FROM User_event_entries
+        WHERE Id_user_event = ?;
+      `;
+      await this.connectionMysql.sql(query, [userEventId], (result) => {
+        if (result.error) {
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression de l'évènement utilisateur"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
   async getAllUserEventsByCompany(id) {
     return new Promise(async (resolve) => {
       const userEvents = [];
@@ -720,7 +755,7 @@ module.exports = class MealsRequest {
               userEvents.push({
                 id: row.ue_Id,
                 userId: row.ue_Id_user,
-                created: row.ue_Created ?? null,
+                created: row.ue_Created ? row.ue_Created : null,
                 elements: [],
               });
             }

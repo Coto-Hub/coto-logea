@@ -3,11 +3,13 @@ import Swal from "sweetalert2";
 import moment from 'moment';
 import { socket, state } from "@/socket";
 import IconSetting from "@/components/icons/IconSetting.vue";
+import Meals from "@/components/Meals.vue";
 
 export default {
   name: "app-meal",
   components: {
     IconSetting,
+    Meals,
   },
   props: {
   },
@@ -23,8 +25,6 @@ export default {
           <path d="M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6M18 6V16.2C18 17.8802 18 18.7202 17.673 19.362C17.3854 19.9265 16.9265 20.3854 16.362 20.673C15.7202 21 14.8802 21 13.2 21H10.8C9.11984 21 8.27976 21 7.63803 20.673C7.07354 20.3854 6.6146 19.9265 6.32698 19.362C6 18.7202 6 17.8802 6 16.2V6M14 10V17M10 10V17" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       `,
-      months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
-      days: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
       date: moment().set('hour', 0).set('minute', 0).set('second', 0),
       stringDate: '',
       isStaffMealView: false,
@@ -154,10 +154,13 @@ export default {
                 if (a.lastname > b.lastname) return 1;
                 return a.civility - b.civility;
               }).map((user) => {
+                const nbConfig = state.userMealConfigs.filter(c => c.userId == user.id).length;
                 return `
-              <li class="list-item" data-id="${user.id}">
-                <p>${user.civility} <span class="filter">${user.lastname}</span> ${user.firstname}</p>
-              </li>`;
+          <li class="list-item${isStaff ? ' staff-item' : ''}" data-configs="${nbConfig}" data-id="${user.id}">
+            <p>${user.civility} <span class="filter">${user.lastname}</span> ${user.firstname}</p>
+            <div class="config-nb"><span>${nbConfig}</span> Config${nbConfig > 1 ? 's' : ''}</div>
+          </li>
+        `;
               }).join('');
             }
           });
@@ -206,11 +209,13 @@ export default {
       });
     },
     mealsModal() {
-      const meallist = state.kindMeals.filter(a => a.isActive).map((a) => `
+      const today = moment().set('hour', 0).set('minute', 0).set('second', 0);
+      const meallist = state.kindMeals.filter(a => !a.endDate || moment(a.endDate).isAfter(today)).map((a) => `
         <li data-id="${a.id}">
           <p>${a.label}</p>
           <div class="inputs">
             <div class="icon edit">${this.editIcon}</div>
+            <div class="icon trash">${this.trashIcon}</div>
             <div class="order-container">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="order-icon up">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
@@ -250,11 +255,12 @@ export default {
             this.addMealModal();
           });
           document.getElementById('update-meal-list').addEventListener('update', () => {
-            document.getElementById('update-meal-list').innerHTML = state.kindMeals.filter(a => a.isActive).map((a) => `
+            document.getElementById('update-meal-list').innerHTML = state.kindMeals.filter(a => !a.endDate || moment(a.endDate).isAfter(today)).map((a) => `
         <li data-id="${a.id}">
           <p>${a.label}</p>
           <div class="inputs">
             <div class="icon edit">${this.editIcon}</div>
+            <div class="icon trash">${this.trashIcon}</div>
             <div class="order-container">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="order-icon up">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
@@ -273,6 +279,10 @@ export default {
               if (e.target.closest('div').classList.contains('edit')) {
                 Swal.close();
                 this.editMealModal(id);
+              }
+              if (e.target.closest('div').classList.contains('trash')) {
+                Swal.close();
+                this.deleteMealModal(id);
               }
             }
             if (e.target.closest('div').classList.contains('order-container')) {
@@ -330,6 +340,7 @@ export default {
         title: `${isStaff ? 'Personnel : ' : 'Résident : '} ${user.civility} ${user.lastname} `,
         html: `
         <div class="show-user-modal-container modal-container">
+              <div class="trash-user-btn" id="trash-user-btn">${this.trashIcon}</div>
               <div class="edit-user-btn" id="edit-user-btn">${this.editIcon}</div>
               <h2>Configuration des repas</h2>
               <div class="user-config-list-container">
@@ -351,6 +362,10 @@ export default {
           document.getElementById("edit-user-btn").addEventListener('click', (e) => {
             Swal.clickDeny();
             this.editUserModal(isStaff, user);
+          });
+          document.getElementById("trash-user-btn").addEventListener('click', (e) => {
+            Swal.clickDeny();
+            this.deleteUserModal(isStaff, user);
           });
           document.getElementById("add-user-config").addEventListener('click', (e) => {
             Swal.clickDeny();
@@ -391,7 +406,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `Créer ${isStaff ? 'le personnel' : 'le résident'} `,
+        title: `Créer le ${isStaff ? 'personnel' : 'résident'} `,
         html: `
         <div class="add-user-modal-container modal-container">
               <div class="input-row">
@@ -407,10 +422,14 @@ export default {
                     <li class="choice" data-choice="M.">M.</li>
                   </ul>
                 </div>
-                <input type="text" id="input-user-lastname" class="btn-input btn-search" placeholder="Nom" />
+                <input type="text" id="input-user-lastname" class="btn-input" placeholder="Nom" />
               </div>
               <div class="input-row">
-                <input type="text" id="input-user-firstname" class="btn-input btn-search" placeholder="Prénom" />
+                <input type="text" id="input-user-firstname" class="btn-input" placeholder="Prénom" />
+              </div>
+              <div class="input-row">
+                <p>Lieu de repas :</p>
+                <input type="text" id="input-user-eating-area" class="btn-input" placeholder="Salle / Cosy" />
               </div>
             </div>
         `,
@@ -453,12 +472,21 @@ export default {
               e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
             }
           });
+          document.getElementById("input-user-eating-area").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
         },
         preConfirm: () => {
           const values = {
             civility: document.getElementById("btn-switch-civility").dataset.value,
             lastname: document.getElementById("input-user-lastname").value,
             firstname: document.getElementById("input-user-firstname").value,
+            eatingArea: document.getElementById("input-user-eating-area").value,
           };
 
           if (!values.lastname) {
@@ -503,10 +531,14 @@ export default {
                     <li class="choice" data-choice="M.">M.</li>
                   </ul>
                 </div>
-                <input type="text" id="input-user-lastname" class="btn-input btn-search" value="${user.lastname}" placeholder="Nom" />
+                <input type="text" id="input-user-lastname" class="btn-input" value="${user.lastname}" placeholder="Nom" />
               </div>
               <div class="input-row">
-                <input type="text" id="input-user-firstname" class="btn-input btn-search" value="${user.firstname}" placeholder="Prénom" />
+                <input type="text" id="input-user-firstname" class="btn-input" value="${user.firstname}" placeholder="Prénom" />
+              </div>
+              <div class="input-row">
+                <p>Lieu de repas :</p>
+                <input type="text" id="input-user-eating-area" class="btn-input" value="${user.eatingArea}" placeholder="Salle / Cosy" />
               </div>
             </div>
         `,
@@ -549,12 +581,22 @@ export default {
               e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
             }
           });
+          document.getElementById("input-user-eating-area").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
         },
         preConfirm: () => {
           const values = {
             civility: document.getElementById("btn-switch-civility").dataset.value,
             lastname: document.getElementById("input-user-lastname").value,
             firstname: document.getElementById("input-user-firstname").value,
+            eatingArea: document.getElementById("input-user-eating-area").value,
+
           };
 
           if (!values.lastname) {
@@ -570,6 +612,72 @@ export default {
         if (data.isConfirmed) {
           data.value.id = user.id;
           socket.emit('edit user', data.value);
+        }
+        this.usersModal(isStaff);
+      });
+    },
+    deleteUserModal(isStaff, user) {
+      if (!user) return;
+      const data = {};
+      const noConfigs = state.userMealConfigs.filter(c => c.userId == user.id).length == 0;
+      if (noConfigs) {
+        data.html = `
+            <div class="delete-user-modal-container modal-container">
+              <h2>Vous allez supprimer <strong>${user.civility} ${user.lastname} ${user.firstname}</strong>.</h2>
+              <p class="warning-label">Cette action est irréversible.</p>
+            </div>
+        `;
+        data.preConfirm = () => {
+          return {};
+        };
+      }
+      else {
+        data.html = `
+            <div class="delete-user-modal-container modal-container">
+              <h2>Pour supprimer <strong>${user.civility} ${user.lastname} ${user.firstname}</strong> vous devez renseigner une date de sortie.</h2>
+              <div class="date-container">
+                <input type="date" id="input-user-date-end" value="" class="btn-input" />
+              </div>
+              <p class="warning-label">Cette action est irréversible.</p>
+            </div>
+        `;
+        data.preConfirm = () => {
+          const values = {
+            date: document.getElementById("input-user-date-end").value,
+          };
+          if (!values.date) {
+            Swal.showValidationMessage(`Vous devez renseigner une date de fin.`);
+          }
+
+          return values;
+        };
+      }
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Supprimer un ${isStaff ? 'membre du personnel' : 'résident'}`,
+        html: data.html,
+        confirmButtonText: 'Supprimer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        preConfirm: data.preConfirm,
+      }).then((data) => {
+        if (data.isConfirmed) {
+          if (noConfigs) {
+            socket.emit('delete user', user.id);
+          }
+          else {
+            data.value.id = user.id;
+            socket.emit('delete user with config', data.value);
+          }
         }
         this.usersModal(isStaff);
       });
@@ -728,12 +836,57 @@ export default {
         this.mealsModal();
       });
     },
+    deleteMealModal(id) {
+      const kindMeal = state.kindMeals.find(k => k.id == id);
+      if (!kindMeal) return;
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Supprimer un type de repas`,
+        html: `
+            <div class="delete-meal-modal-container modal-container">
+              <h2>Pour supprimer le type de repas <strong>${kindMeal.label}</strong> vous devez renseigner une date de fin.</h2>
+              <div class="date-container">
+                <input type="date" id="input-meal-date-end" value="" class="btn-input" />
+              </div>
+              <p class="warning-label">Cette action est irréversible.</p>
+            </div>
+        `,
+        confirmButtonText: 'Enregistrer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        preConfirm: () => {
+          const values = {
+            date: document.getElementById("input-meal-date-end").value,
+          };
+          if (!values.date) {
+            Swal.showValidationMessage(`Vous devez renseigner une date de fin pour supprimer ce type de repas.`);
+          }
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          data.value.id = kindMeal.id;
+          socket.emit('delete kind meal', data.value);
+        }
+        this.mealsModal();
+      });
+    },
     addUserConfigModal(isStaff, userId) {
       const user = state.users.find(u => u.id == userId && u.isStaff == isStaff);
       const configList = state.userMealConfigs.filter(c => c.userId == userId).sort((a, b) => moment(b.dateStart) - moment(a.dateStart));
       const config = configList.length > 0 ? configList[0] : null;
 
-      const mealList = state.kindMeals.map((kd) => {
+      const mealList = state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (this.isStaffMealView ? kd.isStaff : true)).map((kd) => {
         const current = config ? config.elements.find(e => e.idKindMeal == kd.id) : null;
 
         return `<tr data-id="${kd.id}" data-meal="${current ? true : false}" data-delivery="${current && current.delivery ? true : false}" data-config="{'monday':${current ? current.monday : true},'tuesday':${current ? current.tuesday : true},'wednesday':${current ? current.wednesday : true},'thursday':${current ? current.thursday : true},'friday':${current ? current.friday : true},'saturday':${current ? current.saturday : true},'sunday':${current ? current.sunday : true}}" data-holiday="${current && current.publicHoliday ? true : false}">
@@ -902,7 +1055,7 @@ export default {
                 const config = JSON.parse(tr.dataset.config.replaceAll("'", '"') ?? '{}');
                 values.configList.push({
                   idKindMeal: tr.dataset.id,
-                  delivery: tr.dataset.delivery == "true",
+                  delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
                   monday: config.monday,
                   tuesday: config.tuesday,
                   wednesday: config.wednesday,
@@ -910,7 +1063,7 @@ export default {
                   friday: config.friday,
                   saturday: config.saturday,
                   sunday: config.sunday,
-                  publicHoliday: tr.dataset.holiday == "true",
+                  publicHoliday: (tr.dataset.holiday == "true" || tr.dataset.holiday == 1),
                 });
               }
             }
@@ -998,7 +1151,11 @@ export default {
               ${mealList.join('')}
             </tbody>
           </table>
-            </div>
+          <div class="date-container">
+            <label for="input-date-start">Date de début</label>
+            <input type="date" id="input-date-start" class="btn-input" value="${moment(config.dateStart).format('YYYY-MM-DD') ?? ''}" placeholder="Date de début" />
+          </div>
+        </div>
         `,
         confirmButtonText: 'Enregistrer',
         showCancelButton: true,
@@ -1093,15 +1250,17 @@ export default {
         preConfirm: () => {
           const values = {
             configList: [],
+            dateStart: document.getElementById("input-date-start").value,
           };
 
           document.getElementById('user-config-meal-list').querySelectorAll('tr').forEach(
             (tr) => {
               if (tr.dataset.id && tr.dataset.meal == "true") {
                 const config = JSON.parse(tr.dataset.config.replaceAll("'", '"') ?? '{}');
+
                 values.configList.push({
                   idKindMeal: tr.dataset.id,
-                  delivery: tr.dataset.delivery == "true",
+                  delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
                   monday: config.monday,
                   tuesday: config.tuesday,
                   wednesday: config.wednesday,
@@ -1109,7 +1268,7 @@ export default {
                   friday: config.friday,
                   saturday: config.saturday,
                   sunday: config.sunday,
-                  publicHoliday: tr.dataset.holiday == "true",
+                  publicHoliday: (tr.dataset.holiday == "true" || tr.dataset.holiday == 1),
                 });
               }
             }
@@ -1122,7 +1281,25 @@ export default {
       }).then((data) => {
         if (data.isConfirmed) {
           data.value.userId = userId;
+          data.value.configId = configId;
           data.value.dateEnd = null;
+          data.value.adedEntries = data.value.configList.filter(c => !config.elements.find(e => e.idKindMeal == c.idKindMeal));
+          data.value.deletedEntries = config.elements.filter(e => !data.value.configList.find(c => c.idKindMeal == e.idKindMeal)).map(e => e.idKindMeal);
+          data.value.editedEntries = data.value.configList.filter(c => {
+            const existing = config.elements.find(e => e.idKindMeal == c.idKindMeal);
+            if (!existing) return false;
+            return (
+              existing.delivery != c.delivery ||
+              existing.monday != c.monday ||
+              existing.tuesday != c.tuesday ||
+              existing.wednesday != c.wednesday ||
+              existing.thursday != c.thursday ||
+              existing.friday != c.friday ||
+              existing.saturday != c.saturday ||
+              existing.sunday != c.sunday ||
+              existing.publicHoliday != c.publicHoliday
+            );
+          });
           socket.emit('edit user meal config', data.value);
         }
         this.showUserModal(isStaff, userId);
@@ -1143,7 +1320,7 @@ export default {
       }
       this.stringDate = this.formatDate(this.date);
     },
-    addGuestModal(userId, dateStart, dateEnd, nbGuests) {
+    addGuestModal(userId, label, dateStart, dateEnd, nbGuests, isStaff = false) {
       const userlist = state.users.filter(u => u.isStaff == false).sort((a, b) => {
         if (a.lastname < b.lastname) return -1;
         if (a.lastname > b.lastname) return 1;
@@ -1168,13 +1345,25 @@ export default {
         title: `Ajouter un invité`,
         html: `
           <div class="add-guest-modal-container modal-container">
-            <div class="users-search-input">
+            <label for="is-staff" class="btn-checkbox ${isStaff ? 'active' : ''}">
+              <input type="checkbox"  ${isStaff ? 'checked' : ''} id="is-staff" class="hidden" />
+              <span class="checkmark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                </svg>
+              </span>
+              <span class="label">Membre du personnel</span>
+            </label>
+            <div class="users-search-input ${isStaff ? 'hidden' : ''}">
               <input type="text" class="btn-input" id="search-users-label" data-id="${userId ?? 'null'}" value="${currentUser ? currentUser.civility + ' ' + currentUser.lastname : ''}" placeholder="Sélection du résident" />
               <div class="search-result">
                 <ul id="update-users-list">
                   ${userlist}
                 </ul>
               </div>
+            </div>
+            <div class="guest-label-input ${!isStaff ? 'hidden' : ''}">
+              <input type="text" class="btn-input" id="input-guest-label" value="${label ?? ''}" placeholder="Logéa" />
             </div>
             <div class="content-input">
               <div class="date-container">
@@ -1279,6 +1468,28 @@ export default {
             showNb.textContent = `${nbDays} jour${nbDays > 1 ? 's' : ''} sélectionné${nbDays > 1 ? 's' : ''}`;
             showNb.dataset.value = nbDays;
           });
+          document.getElementById("input-guest-label").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
+          document.getElementById("is-staff").addEventListener('click', (e) => {
+            e.target.closest('label').classList.toggle('active');
+            if (e.target.checked) {
+              document.querySelector('.users-search-input').classList.add('hidden');
+              document.querySelector('.guest-label-input').classList.remove('hidden');
+              document.getElementById('search-users-label').value = '';
+              document.getElementById('search-users-label').dataset.id = 'null';
+            }
+            else {
+              document.querySelector('.users-search-input').classList.remove('hidden');
+              document.querySelector('.guest-label-input').classList.add('hidden');
+              document.getElementById('input-guest-label').value = '';
+            }
+          });
         },
         preConfirm: () => {
           const values = {
@@ -1286,11 +1497,14 @@ export default {
             dateStart: document.getElementById("input-guest-date-start").value,
             dateEnd: document.getElementById("input-guest-date-end").value,
             nbGuests: parseInt(document.getElementById("nb-guest-input-value").value) || 1,
+            guestLabel: document.getElementById("input-guest-label").value,
+            isStaff: document.getElementById("is-staff").checked,
           };
 
-          if (!values.userId) {
-            Swal.showValidationMessage(`Vous devez sélectionner un résident.`);
+          if (values.userId == "null") {
+            values.userId = null;
           }
+
           if (!values.dateStart) {
             Swal.showValidationMessage(`La date de début est obligatoire.`);
           }
@@ -1303,17 +1517,113 @@ export default {
           if (values.nbGuests < 1 || values.nbGuests > 100) {
             Swal.showValidationMessage(`Le nombre d'invités doit être compris entre 1 et 100.`);
           }
+          if (values.isStaff && !values.guestLabel) {
+            Swal.showValidationMessage(`Le membre du personnel doit avoir un nom.`);
+          }
 
           return values;
         },
       }).then((data) => {
         if (data.isConfirmed) {
-          this.addGuestConfigModal(data.value.userId, data.value.dateStart, data.value.dateEnd, data.value.nbGuests);
+          if ((!data.value.userId || data.value.userId == "null") && data.value.isStaff == false) {
+            this.addUnknownGuestModal(data.value.dateStart, data.value.dateEnd, data.value.nbGuests);
+          }
+          else {
+            this.addGuestConfigModal(data.value.userId, data.value.guestLabel, data.value.dateStart, data.value.dateEnd, data.value.nbGuests, data.value.isStaff);
+          }
         }
       });
     },
-    addGuestConfigModal(userId, dateStart, dateEnd, nbGuests) {
-      const user = state.users.find(u => u.id == userId && u.isStaff == false);
+    addUnknownGuestModal(dateStart, dateEnd, nbGuests) {
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Ajouter ${nbGuests} invité${nbGuests > 1 ? 's' : ''}`,
+        html: `
+          <div class="guest-user-modal-container modal-container">
+              <div class="input-row">
+                <p>Pour ajouter ${nbGuests > 1 ? 'des invités' : 'un invité'} non reliés a un résident, veuillez renseigner un nom.</p>
+              </div>
+              <div class="input-row">
+                <div class="btn-switch-select" id="btn-switch-civility" data-value="Mme">
+                  <div class="switch-label">
+                    <p class="current-choice">Mme</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                  <ul class="switch-list">
+                    <li class="choice" data-choice="Mme">Mme</li>
+                    <li class="choice" data-choice="M.">M.</li>
+                  </ul>
+                </div>
+                <input type="text" id="input-user-lastname" class="btn-input" placeholder="Nom" />
+              </div>
+            </div>
+        `,
+        confirmButtonText: 'Confirmer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        willOpen: () => {
+          document.getElementById("btn-switch-civility").addEventListener('click', (e) => {
+            const btn = e.target.closest("#btn-switch-civility");
+            if (!btn.classList.contains('active')) {
+              btn.querySelectorAll('.choice').forEach((li) => {
+                li.style.display = li.dataset && li.dataset.choice == btn.dataset.value ? 'none' : 'flex';
+              });
+            }
+            else {
+              const choice = e.target.closest(".choice");
+              if (choice) {
+                btn.dataset.value = choice.dataset.choice;
+                btn.querySelector('.current-choice').textContent = choice.dataset.choice;
+              }
+            }
+            btn.classList.toggle('active');
+          });
+          document.getElementById("input-user-lastname").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value.toUpperCase().replaceAll('  ', ' ');
+            }
+          });
+        },
+        preConfirm: () => {
+          const values = {
+            civility: document.getElementById("btn-switch-civility").dataset.value,
+            lastname: document.getElementById("input-user-lastname").value,
+            label: null,
+          };
+
+          if (!values.lastname) {
+            Swal.showValidationMessage(`${nbGuests > 1 ? "Les invités doivent" : "L'invité doit"} avoir un nom.`);
+          }
+
+          values.label = `${values.civility} ${values.lastname}`;
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          this.addGuestConfigModal(null, data.value.label, dateStart, dateEnd, nbGuests, false);
+        }
+        if (data.isDismissed) {
+          this.addGuestModal(null, null, dateStart, dateEnd, nbGuests, false);
+        }
+      });
+    },
+    addGuestConfigModal(userId, guestLabel, dateStart, dateEnd, nbGuests, isStaff) {
+      const user = state.users.find(u => u.id == userId);
       const listDate = [];
       for (var m = moment(dateStart); m.diff(dateEnd, 'days') <= 0; m.add(1, 'days')) {
         listDate.push(m.format('DD-MM-YYYY'));
@@ -1322,16 +1632,13 @@ export default {
         return `'${date}': true`;
       }).join(',') ?? '';
 
-      const mealList = state.kindMeals.map((kd) => {
+      const mealList = state.kindMeals.filter(kd => !isStaff || kd.isStaff == isStaff).map((kd) => {
         return `<tr data-id="${kd.id}" data-meal="false" data-delivery="false" data-config="{${defaultDaysConfig}}">
             <td>
               ${kd.label}
             </td>
             <td>
               <div class="custom-checkbox" data-type="meal"></div>
-            </td>
-            <td>
-              <div class="custom-checkbox ${!kd.canDelivery ? 'disabled' : ''}" data-type="delivery"></div>
             </td>
             <td>
               <div class="btn-select" data-type="days" data-value="{${defaultDaysConfig}}">
@@ -1358,13 +1665,12 @@ export default {
         title: `Créer une configuration de repas`,
         html: `
             <div class="add-user-config-modal-container modal-container">
-              <h2>Invité de ${user.civility} ${user.lastname}</h2>
+              <h2>${(userId && user) ? 'Invité de ' + user.civility + ' ' + user.lastname : guestLabel} (${nbGuests})</h2>
               <table class="table meal-table">
                 <thead>
                   <tr>
                     <th></th>
                     <th>Repas</th>
-                    <th>Plateau</th>
                     <th>Jours actifs</th>
                   </tr>
                 </thead>
@@ -1390,10 +1696,6 @@ export default {
               if (checkbox.classList.contains('active')) {
                 checkbox.classList.remove('active');
                 tr.dataset[type] = false;
-                if (type == "meal") {
-                  tr.dataset.delivery = false;
-                  tr.querySelector('div[data-type="delivery"]').classList.remove('active');
-                }
               }
               else {
                 checkbox.classList.add('active');
@@ -1485,7 +1787,7 @@ export default {
                     } else {
                       values.entries.push({
                         idKindMeal: tr.dataset.id,
-                        delivery: tr.dataset.delivery == "true",
+                        delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
                         dateStart: start.format('YYYY-MM-DD'),
                         dateEnd: end.format('YYYY-MM-DD'),
                       });
@@ -1497,7 +1799,7 @@ export default {
                 if (start) {
                   values.entries.push({
                     idKindMeal: tr.dataset.id,
-                    delivery: tr.dataset.delivery == "true",
+                    delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
                     dateStart: start.format('YYYY-MM-DD'),
                     dateEnd: end.format('YYYY-MM-DD'),
                   });
@@ -1515,11 +1817,13 @@ export default {
           socket.emit('add guest', {
             userId,
             nbGuests,
+            label: guestLabel,
+            isStaff,
             entries: data.value.entries
           });
         }
         if (data.isDismissed) {
-          this.addGuestModal(userId, dateStart, dateEnd, nbGuests);
+          this.addGuestModal(userId, guestLabel, dateStart, dateEnd, nbGuests, isStaff);
         }
         // this.showUserModal(isStaff, userId);
       });
@@ -1682,6 +1986,7 @@ export default {
       const mealList = state.kindMeals.map((kd) => {
         const currentDaysConfigMeal = {};
         const currentDaysConfigDelivery = {};
+
         configsByDate.map((cd) => {
           let mealIsActive = false;
           let deliveryIsActive = false;
@@ -1689,7 +1994,7 @@ export default {
           const dayEvents = [];
           cd.events.forEach((ev) => {
             ev.elements.forEach((el) => {
-              if (el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= cd.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= cd.date.format("YYYY-MM-DD")) {
+              if (el.idKindMeal == kd.id && moment.utc(cd.date, "DD-MM-YYYY").isBetween(moment(el.dateStart), moment(el.dateEnd), undefined, '[]')) {
                 dayEvents.push(el);
               }
             });
@@ -1720,9 +2025,26 @@ export default {
           currentDaysConfigMeal[cd.date] = mealIsActive ? true : false;
           currentDaysConfigDelivery[cd.date] = deliveryIsActive ? true : false;
         });
-
-
-        return `<tr data-id="${kd.id}" 
+        if (configsByDate.length < 2) {
+          return `<tr data-id="${kd.id}" 
+        data-dates="${JSON.stringify(listDate).replaceAll('"', "'")}"
+        data-previous-meal="${JSON.stringify(currentDaysConfigMeal).replaceAll('"', "'")}"
+        data-previous-delivery="${JSON.stringify(currentDaysConfigDelivery).replaceAll('"', "'")}" 
+        data-meal="${JSON.stringify(currentDaysConfigMeal).replaceAll('"', "'")}" 
+        data-delivery="${JSON.stringify(currentDaysConfigDelivery).replaceAll('"', "'")}">
+            <td>
+              ${kd.label}
+            </td>
+            <td>
+              <div class="custom-checkbox ${currentDaysConfigMeal[listDate[0]] ? 'active' : ''}" data-type="meal"></div>
+            </td>
+            <td>
+              <div class="custom-checkbox ${!kd.canDelivery ? 'disabled' : ''}" data-type="delivery"></div>
+            </td>
+          </tr> `;
+        }
+        else {
+          return `<tr data-id="${kd.id}" 
         data-dates="${JSON.stringify(listDate).replaceAll('"', "'")}"
         data-previous-meal="${JSON.stringify(currentDaysConfigMeal).replaceAll('"', "'")}"
         data-previous-delivery="${JSON.stringify(currentDaysConfigDelivery).replaceAll('"', "'")}" 
@@ -1771,7 +2093,8 @@ export default {
                 </ul>
               </div>
             </td>
-          </tr> `
+          </tr> `;
+        }
       }).join('');
       Swal.mixin({
         width: '50vw',
@@ -1798,6 +2121,7 @@ export default {
                   ${mealList}
                 </tbody>
               </table>
+              <p class="font-semibold">${dateStart == dateEnd ? `${moment(dateStart).format('dddd D MMMM YYYY')}` : `Du ${moment(dateStart).format('DD-MM-YYYY')} au ${moment(dateEnd).format('DD-MM-YYYY')}`}</p>
             </div> `,
         confirmButtonText: 'Enregistrer',
         showCancelButton: true,
@@ -1806,132 +2130,152 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
         willOpen: () => {
-          document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
-            const tr = e.target.closest('tr');
-            const mealSelect = tr.querySelector('div[data-type="meal"]');
-            const mealSelectValues = JSON.parse(mealSelect.dataset.value.replaceAll("'", '"') ?? '{}');
-            const deliverySelect = tr.querySelector('div[data-type="delivery"]');
-            const deliverySelectValues = JSON.parse(deliverySelect.dataset.value.replaceAll("'", '"') ?? '{}');
-            if (e.target.closest('svg')) {
-              const select = e.target.closest('.btn-select');
-              const type = select.dataset.type;
-              const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
-              if (e.target.closest('svg').classList.contains('select-all-btn')) {
-                Object.keys(current).forEach((key) => {
-                  current[key] = (type == "delivery") ? (mealSelectValues[key] == true) : true;
-                });
-                select.dataset.value = JSON.stringify(current);
-                select.dataset.nb = Object.values(current).length;
-                tr.dataset[type] = JSON.stringify(current);
-                select.querySelectorAll('.choice:not(.disabled)').forEach((li) => {
-                  li.classList.add('active');
-                });
-              }
-              else if (e.target.closest('svg').classList.contains('remove-all-btn')) {
-                Object.keys(current).forEach((key) => {
-                  current[key] = false;
-                });
-                select.dataset.value = JSON.stringify(current);
-                select.dataset.nb = 0;
-                tr.dataset[type] = JSON.stringify(current);
-                select.querySelectorAll('.choice').forEach((li) => {
-                  li.classList.remove('active');
-                });
-                if (type == "meal") {
-                  Object.keys(deliverySelectValues).forEach((key) => {
-                    deliverySelectValues[key] = false;
-                    deliverySelect.querySelector(`li[data-choice="${key}"]`).classList.remove('active');
-                  });
-                  deliverySelect.dataset.value = JSON.stringify(deliverySelectValues);
+          if (configsByDate.length < 2) {
+            document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
+              const tr = e.target.closest('tr');
+              const checkbox = e.target.closest('div');
+              if (checkbox.classList.contains('custom-checkbox') && !checkbox.classList.contains('disabled')) {
+                const type = checkbox.dataset.type;
+                if (checkbox.classList.contains('active')) {
+                  checkbox.classList.remove('active');
+                  tr.dataset[type] = `{'${listDate[0]}':false}`;
+                }
+                else {
+                  checkbox.classList.add('active');
+                  tr.dataset[type] = `{'${listDate[0]}':true}`;
                 }
               }
-            }
-            else if (e.target.closest('li') && e.target.closest('li').classList.contains('choice')) {
-              const li = e.target.closest('.choice');
-              const select = li.closest('.btn-select');
-              const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
-              if (select.dataset.type == "delivery") {
-                const mealSelect = JSON.parse(tr.querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
-                if (mealSelect[li.dataset.choice] == false) {
-                  return;
-                }
-              }
-              else if (select.dataset.type == "meal") {
-                if (current[li.dataset.choice] == true) {
-                  deliverySelect.querySelector(`li[data-choice="${li.dataset.choice}"]`).classList.remove('active');
-                  deliverySelectValues[li.dataset.choice] = false;
-                  deliverySelect.dataset.value = JSON.stringify(deliverySelectValues);
-                }
-              }
-              if (li.classList.contains('active')) {
-                li.classList.remove('active');
-                current[li.dataset.choice] = false;
-                select.dataset.value = JSON.stringify(current);
-                tr.dataset[select.dataset.type] = JSON.stringify(current);
-              }
-              else {
-                li.classList.add('active');
-                current[li.dataset.choice] = true;
-                select.dataset.value = JSON.stringify(current);
-                tr.dataset[select.dataset.type] = JSON.stringify(current);
-              }
-            }
-            else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-              document.querySelectorAll('div.btn-select').forEach((li) => {
-                if (li != e.target.closest('div.btn-select')) {
-                  li.classList.remove('active');
-                }
-              });
-              if ((e.target.closest('div.btn-select').dataset.type != "delivery") || (e.target.closest('tr').querySelector('div[data-type="meal"]') && (e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.nb != "0"))) {
-                if (e.target.closest('div.btn-select').dataset.type == "delivery") {
-                  const mealSelect = JSON.parse(e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
-                  e.target.closest('div.btn-select').querySelectorAll('.choice').forEach((li) => {
-                    if (mealSelect[li.dataset.choice] == false) {
-                      li.classList.add('disabled');
-                    }
-                    else {
-                      li.classList.remove('disabled');
-                    }
-                  });
-                }
-                e.target.closest('div.btn-select').classList.toggle('active');
-              }
-            }
-            if (deliverySelect) {
-              const deliverySelectValues = JSON.parse(deliverySelect.dataset.value.replaceAll("'", '"') ?? '{}');
-              const nbElement = Object.values(deliverySelectValues).filter(v => v == true).length;
-              switch (nbElement) {
-                case 0:
-                  deliverySelect.querySelector('.current-choice').textContent = 'Aucun jour';
-                  break;
-                case Object.values(deliverySelectValues).length:
-                  deliverySelect.querySelector('.current-choice').textContent = 'Tous les jours';
-                  break;
-
-                default:
-                  deliverySelect.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
-                  break;
-              }
-              deliverySelect.dataset.nb = nbElement;
-            }
-            if (mealSelect) {
+            });
+          }
+          else {
+            document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
+              const tr = e.target.closest('tr');
+              const mealSelect = tr.querySelector('div[data-type="meal"]');
               const mealSelectValues = JSON.parse(mealSelect.dataset.value.replaceAll("'", '"') ?? '{}');
-              const nbElement = Object.values(mealSelectValues).filter(v => v == true).length;
-              switch (nbElement) {
-                case 0:
-                  mealSelect.querySelector('.current-choice').textContent = 'Aucun jour';
-                  break;
-                case Object.values(mealSelectValues).length:
-                  mealSelect.querySelector('.current-choice').textContent = 'Tous les jours';
-                  break;
-
-                default:
-                  mealSelect.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
-                  break;
+              const deliverySelect = tr.querySelector('div[data-type="delivery"]');
+              const deliverySelectValues = JSON.parse(deliverySelect.dataset.value.replaceAll("'", '"') ?? '{}');
+              if (e.target.closest('svg')) {
+                const select = e.target.closest('.btn-select');
+                const type = select.dataset.type;
+                const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
+                if (e.target.closest('svg').classList.contains('select-all-btn')) {
+                  Object.keys(current).forEach((key) => {
+                    current[key] = (type == "delivery") ? (mealSelectValues[key] == true) : true;
+                  });
+                  select.dataset.value = JSON.stringify(current);
+                  select.dataset.nb = Object.values(current).length;
+                  tr.dataset[type] = JSON.stringify(current);
+                  select.querySelectorAll('.choice:not(.disabled)').forEach((li) => {
+                    li.classList.add('active');
+                  });
+                }
+                else if (e.target.closest('svg').classList.contains('remove-all-btn')) {
+                  Object.keys(current).forEach((key) => {
+                    current[key] = false;
+                  });
+                  select.dataset.value = JSON.stringify(current);
+                  select.dataset.nb = 0;
+                  tr.dataset[type] = JSON.stringify(current);
+                  select.querySelectorAll('.choice').forEach((li) => {
+                    li.classList.remove('active');
+                  });
+                  if (type == "meal") {
+                    Object.keys(deliverySelectValues).forEach((key) => {
+                      deliverySelectValues[key] = false;
+                      deliverySelect.querySelector(`li[data-choice="${key}"]`).classList.remove('active');
+                    });
+                    deliverySelect.dataset.value = JSON.stringify(deliverySelectValues);
+                  }
+                }
               }
-              mealSelect.dataset.nb = nbElement;
-            }
-          });
+              else if (e.target.closest('li') && e.target.closest('li').classList.contains('choice')) {
+                const li = e.target.closest('.choice');
+                const select = li.closest('.btn-select');
+                const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
+                if (select.dataset.type == "delivery") {
+                  const mealSelect = JSON.parse(tr.querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
+                  if (mealSelect[li.dataset.choice] == false) {
+                    return;
+                  }
+                }
+                else if (select.dataset.type == "meal") {
+                  if (current[li.dataset.choice] == true) {
+                    deliverySelect.querySelector(`li[data-choice="${li.dataset.choice}"]`).classList.remove('active');
+                    deliverySelectValues[li.dataset.choice] = false;
+                    deliverySelect.dataset.value = JSON.stringify(deliverySelectValues);
+                  }
+                }
+                if (li.classList.contains('active')) {
+                  li.classList.remove('active');
+                  current[li.dataset.choice] = false;
+                  select.dataset.value = JSON.stringify(current);
+                  tr.dataset[select.dataset.type] = JSON.stringify(current);
+                }
+                else {
+                  li.classList.add('active');
+                  current[li.dataset.choice] = true;
+                  select.dataset.value = JSON.stringify(current);
+                  tr.dataset[select.dataset.type] = JSON.stringify(current);
+                }
+              }
+              else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
+                document.querySelectorAll('div.btn-select').forEach((li) => {
+                  if (li != e.target.closest('div.btn-select')) {
+                    li.classList.remove('active');
+                  }
+                });
+                if ((e.target.closest('div.btn-select').dataset.type != "delivery") || (e.target.closest('tr').querySelector('div[data-type="meal"]') && (e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.nb != "0"))) {
+                  if (e.target.closest('div.btn-select').dataset.type == "delivery") {
+                    const mealSelect = JSON.parse(e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
+                    e.target.closest('div.btn-select').querySelectorAll('.choice').forEach((li) => {
+                      if (mealSelect[li.dataset.choice] == false) {
+                        li.classList.add('disabled');
+                      }
+                      else {
+                        li.classList.remove('disabled');
+                      }
+                    });
+                  }
+                  e.target.closest('div.btn-select').classList.toggle('active');
+                }
+              }
+              if (deliverySelect) {
+                const deliverySelectValues = JSON.parse(deliverySelect.dataset.value.replaceAll("'", '"') ?? '{}');
+                const nbElement = Object.values(deliverySelectValues).filter(v => v == true).length;
+                switch (nbElement) {
+                  case 0:
+                    deliverySelect.querySelector('.current-choice').textContent = 'Aucun jour';
+                    break;
+                  case Object.values(deliverySelectValues).length:
+                    deliverySelect.querySelector('.current-choice').textContent = 'Tous les jours';
+                    break;
+
+                  default:
+                    deliverySelect.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
+                    break;
+                }
+                deliverySelect.dataset.nb = nbElement;
+              }
+              if (mealSelect) {
+                const mealSelectValues = JSON.parse(mealSelect.dataset.value.replaceAll("'", '"') ?? '{}');
+                const nbElement = Object.values(mealSelectValues).filter(v => v == true).length;
+                switch (nbElement) {
+                  case 0:
+                    mealSelect.querySelector('.current-choice').textContent = 'Aucun jour';
+                    break;
+                  case Object.values(mealSelectValues).length:
+                    mealSelect.querySelector('.current-choice').textContent = 'Tous les jours';
+                    break;
+
+                  default:
+                    mealSelect.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
+                    break;
+                }
+                mealSelect.dataset.nb = nbElement;
+              }
+            });
+          }
+
           document.getElementById('user-config-meal-list').querySelectorAll('.btn-select').forEach((select) => {
             const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
             select.querySelectorAll('.choice').forEach((li) => {
@@ -2046,6 +2390,197 @@ export default {
         }
       });
     },
+    deleteEventModal(event) {
+      const user = state.users.find(u => u.id == event.userId);
+      if (!user) return;
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Supprimer un enregistrement`,
+        html: `
+            <div class="delete-event-modal-container modal-container">
+              <h2 class="font-medium">${user.civility} ${user.lastname} ${user.firstname}</h2>
+              <h2>Vous allez supprimer ${event.elements.length > 1 ? 'les modifications suivantes' : 'la modification suivante'} :</h2>
+              <ul class="event-container">
+                ${event.elements.map(e => `
+                  <li data-id="${e.id}">
+                    <p>
+                      <strong class="${e.isAbsence ? 'text-red-600' : 'text-green-600'}">${e.isAbsence ? '(Absence)' : e.delivery ? '(Repas + Plateau)' : '(Repas)'}</strong>
+                    ${e.dateStart == e.dateEnd ? `Le ${moment(e.dateStart).format('DD-MM-YYYY')}` : `Du ${moment(e.dateStart).format('DD-MM-YYYY')} au ${moment(e.dateEnd).format('DD-MM-YYYY')}`}
+                    [ ${state.kindMeals.find(kd => kd.id == e.idKindMeal).label} ]
+                    </p>
+                  </li>
+                `).join('')}
+              </ul>
+              <p class="warning-label">Cette action est irréversible.</p>
+            </div>
+        `,
+        confirmButtonText: 'Confirmer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+      }).then((data) => {
+        if (data.isConfirmed) {
+          socket.emit('delete user event meal', event.id);
+        }
+        this.showHistoryModal();
+      });
+    },
+    showHistoryModal() {
+      const eventlist = state.userEvents.sort((a, b) => moment(a.created).isBefore(moment(b.created))).map((event) => {
+        const user = state.users.find(u => u.id == event.userId);
+        return `
+          <li data-id="${event.id}" title="${moment(event.created).calendar()}">
+            <p>
+              <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+              ${user.civility} <span class="px-1 filter">${user.lastname}</span> [${event.elements.length}]
+              <span class="absolute right-4 icon trash" title="Supprimer">${this.trashIcon}</span>
+            </p>
+            <ul>
+              ${event.elements.map(e => `
+                <li data-id="${e.id}">
+                  <p>
+                    <strong>${e.isAbsence ? '(Absence)' : e.delivery ? '(Repas + Plateau)' : '(Repas)'}</strong>
+                    ${e.dateStart == e.dateEnd ? `Le ${moment(e.dateStart).format('DD-MM-YYYY')}` : `Du ${moment(e.dateStart).format('DD-MM-YYYY')} au ${moment(e.dateEnd).format('DD-MM-YYYY')}`}
+                    [ ${state.kindMeals.find(kd => kd.id == e.idKindMeal).label} ]
+                  </p>
+                </li>
+              `).join('')}
+            </ul>
+          </li>
+        `;
+      }).join('');
+      const guestlist = state.guests.sort((a, b) => moment(a.created).isBefore(moment(b.created))).map((guest) => {
+        const userGuest = guest.userId != null ? state.users.find(u => u.id == guest.userId) : null;
+        const guestLabel = userGuest ? `${userGuest.civility} ${userGuest.lastname}` : guest.label;
+        console.log(guest);
+        return `
+          <li data-id="${guest.id}" title="${moment(guest.created).calendar()}">
+            <p>
+              <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+              <strong class="pr-1">${guest.nbGuests}</strong> ${guest.nbGuests > 1 ? `Invités` : `Invité`} - <span class="px-1 filter">${guestLabel}</span> [${guest.elements.length}]
+              <span class="absolute right-4 icon trash" title="Supprimer">${this.trashIcon}</span>
+            </p>
+            <ul>
+              ${guest.elements.map(e => `
+                <li data-id="${e.id}">
+                  <p>
+                    ${e.dateStart == e.dateEnd ? `Le ${moment(e.dateStart).format('DD-MM-YYYY')}` : `Du ${moment(e.dateStart).format('DD-MM-YYYY')} au ${moment(e.dateEnd).format('DD-MM-YYYY')}`}
+                    [ ${state.kindMeals.find(kd => kd.id == e.idKindMeal).label} ]
+                  </p>
+                </li>
+              `).join('')}
+            </ul>
+          </li>
+        `;
+      }).join('');
+      Swal.mixin({
+        width: '40rem',
+        customClass: {
+          confirmButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Historique des modifications`,
+        html: `
+            <div class="history-modal-container modal-container">
+              <div class="default-list-container">
+                <input type="text" id="input-search-list-user" class="btn-input btn-search" placeholder="Rechercher par nom" />
+                <ul class="default-list history-list" id="update-user-events-list">
+                  ${guestlist}
+                  ${eventlist}
+                </ul>
+              </div>
+            </div>
+        `,
+        confirmButtonText: 'Fermer',
+        focusConfirm: false,
+        showDenyButton: false,
+        willOpen: () => {
+          document.getElementById('update-user-events-list').addEventListener('click', (e) => {
+            if (e.target.closest('span') && e.target.closest('span').classList.contains('trash')) {
+              const eventId = e.target.closest('li[data-id]').dataset.id;
+              const event = state.userEvents.find(ev => ev.id == eventId);
+              Swal.close();
+              this.deleteEventModal(event);
+              return;
+            }
+            if (e.target.closest('ul').classList.contains('history-list')) {
+              if (e.target.closest('li').classList.contains('active')) {
+                e.target.closest('li').classList.remove('active');
+                e.target.closest('li').style.height = `3.25rem`;
+              }
+              else {
+                e.target.closest('li').classList.add('active');
+                if (e.target.closest('li').getElementsByTagName('ul').length) {
+                  e.target.closest('li').style.height = `${3 * (e.target.closest('li').getElementsByTagName('ul')[0].querySelectorAll('li').length + 1) + 0.25}rem`;
+                }
+              }
+            }
+          });
+          document.getElementById('update-user-events-list').addEventListener('update', () => {
+            document.getElementById('update-user-events-list').innerHTML = state.userEvents.sort((a, b) => moment(a.created).isBefore(moment(b.created))).map((event) => {
+              const user = state.users.find(u => u.id == event.userId);
+              return `
+          <li data-id="${event.id}" title="${moment(event.created).calendar()}">
+            <p>
+              <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+              ${user.civility} <span class="px-1 filter">${user.lastname}</span> [${event.elements.length}]
+              <span class="absolute right-4 icon trash" title="Supprimer">${this.trashIcon}</span>
+            </p>
+            <ul>
+              ${event.elements.map(e => `
+                <li data-id="${e.id}">
+                  <p>
+                    <strong>${e.isAbsence ? '(Absence)' : e.delivery ? '(Repas + Plateau)' : '(Repas)'}</strong>
+                    ${e.dateStart == e.dateEnd ? `Le ${moment(e.dateStart).format('DD-MM-YYYY')}` : `Du ${moment(e.dateStart).format('DD-MM-YYYY')} au ${moment(e.dateEnd).format('DD-MM-YYYY')}`}
+                    [ ${state.kindMeals.find(kd => kd.id == e.idKindMeal).label} ]
+                  </p>
+                </li>
+              `).join('')}
+            </ul>
+          </li>
+        `;
+            }).join('');
+          });
+        },
+      });
+    },
+    showDetailModal() {
+      Swal.mixin({
+        width: '40rem',
+        customClass: {
+          confirmButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Détails des changement du jour`,
+        html: `
+            <div class="detail-modal-container modal-container">
+            </div>
+        `,
+        confirmButtonText: 'Fermer',
+        focusConfirm: false,
+        showDenyButton: false,
+        willOpen: () => {
+        },
+      });
+    },
     getConfigForDate(userId, date) {
       const target = moment(date, "DD-MM-YYYY");
       const previousConfigs = state.userMealConfigs.filter(c => c.userId == userId)
@@ -2066,7 +2601,7 @@ export default {
       const annee = date.year();
       const joursFeries = (this.joursFeries && this.joursFeries[annee]) ? this.joursFeries[annee] : this.joursFeriesFrance(annee);
       this.joursFeries[annee] = joursFeries;
-      // console.log(joursFeries.some(jf => jf.isSame(date, "day")));
+
       return joursFeries.some(jf => jf.isSame(date, "day"));
     },
     joursFeriesFrance(annee) {
@@ -2123,7 +2658,7 @@ export default {
   },
   computed: {
     getAllKindMeal() {
-      return state.kindMeals.filter(kd => kd.isActive && (this.isStaffMealView ? kd.isStaff : true));
+      return state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (this.isStaffMealView ? kd.isStaff : true));
     },
     getAllUser() {
       return state.users.filter(u => u.isStaff == this.isStaffMealView).sort((a, b) => {
@@ -2133,56 +2668,71 @@ export default {
       });
     },
     getAllUserWithData() {
-      return this.getAllUser.map(user => {
+      const allUser = [...this.getAllUser, { id: null }].map(user => {
+        let values = null;
         const config = this.getConfigForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
         const events = this.getEventsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
         const guests = this.getGuestsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-        // console.log(guests);
 
-        const values = this.getAllKindMeal.map((kd) => {
-          const dayEvents = [];
-          let returnValue = {};
-          events.forEach((ev) => {
-            ev.elements.forEach((el) => {
-              if (el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= this.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= this.date.format("YYYY-MM-DD")) {
-                dayEvents.push(el);
-              }
+        if (user.id !== null) {
+          if (!config || config.dateEnd && moment(config.dateEnd).isBefore(this.date)) {
+            return null;
+          }
+          values = this.getAllKindMeal.map((kd) => {
+            const dayEvents = [];
+            let returnValue = {};
+            events.forEach((ev) => {
+              ev.elements.forEach((el) => {
+                if (el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= this.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= this.date.format("YYYY-MM-DD")) {
+                  dayEvents.push(el);
+                }
+              });
             });
-          });
 
-          if (config && config.elements.find(el => el.idKindMeal == kd.id)) {
-            returnValue = {
-              meal: config.elements.find(el => el.idKindMeal == kd.id)[moment(this.date).format('dddd').toLowerCase()] || false,
-              delivery: config.elements.find(el => el.idKindMeal == kd.id).delivery || false,
-            };
-          }
-          else {
-            returnValue = {
-              meal: false,
-              delivery: false,
-            };
-          }
-          dayEvents.forEach((ev) => {
-            if (ev.isAbsence) {
+            if (config && config.elements.find(el => el.idKindMeal == kd.id)) {
+              const conf = config.elements.find(el => el.idKindMeal == kd.id);
+
+              if (conf.publicHoliday == 0 && this.publicHolidayCheck(this.date)) {
+                returnValue = {
+                  meal: false,
+                  delivery: false,
+                };
+              }
+              else {
+                returnValue = {
+                  meal: conf[moment(this.date).format('dddd').toLowerCase()] || false,
+                  delivery: (conf[moment(this.date).format('dddd').toLowerCase()] && conf.delivery) || false,
+                };
+              }
+            }
+            else {
               returnValue = {
                 meal: false,
                 delivery: false,
               };
             }
-            else {
-              returnValue = {
-                meal: true,
-                delivery: ev.delivery ? true : false,
-              };
-            }
+            dayEvents.forEach((ev) => {
+              if (ev.isAbsence) {
+                returnValue = {
+                  meal: false,
+                  delivery: false,
+                };
+              }
+              else {
+                returnValue = {
+                  meal: true,
+                  delivery: ev.delivery ? true : false,
+                };
+              }
+            });
+            return {
+              id: kd.id,
+              canDelivery: kd.canDelivery,
+              ...returnValue,
+            };
           });
-          return {
-            id: kd.id,
-            canDelivery: kd.canDelivery,
-            ...returnValue,
-          };
-        });
-        const guestsValues = guests.map(g => {
+        }
+        const guestsValues = guests.filter(g => g.isStaff == this.isStaffMealView).map(g => {
           let dateStart = null;
           let dateEnd = null;
           const gValues = this.getAllKindMeal.map((kd) => {
@@ -2215,21 +2765,26 @@ export default {
           return {
             id: g.id,
             nbGuests: g.nbGuests,
+            label: g.label,
             values: gValues,
             dateStart: dateStart,
             dateEnd: dateEnd
           };
         });
+        if (user.id == null && !guestsValues.length) {
+          return null;
+        }
+
         return {
           ...user,
           values,
           guests: guestsValues,
         };
-      });
+      }).filter(u => u != null);
+      return allUser;
     },
     getDayDate() {
-      return `${this.days[moment(this.date).day()]} ${moment(this.date).date()} ${this.months[moment(this.date).month()]}`;
-      // return moment(this.date).format('dddd MMMM YYYY');
+      return moment(this.date).format('dddd D MMMM YYYY');
     }
   }
 };
@@ -2252,44 +2807,8 @@ export default {
     <div class="btn-container right">
       <button class="btn" @click="openExport">Exporter</button>
     </div>
-    <section class="general-input">
-      <div class="meals-header">
-        <div class="user-header"></div>
-        <div class="column-header" :class="{ 'with-tray': kd.canDelivery && !isStaffMealView }"
-          v-for="kd in getAllKindMeal">
-          <p class="kind-meal-label">{{ kd.label }}</p>
-          <div class="flex h-full" v-if="kd.canDelivery && !isStaffMealView">
-            <p :class="kd.canDelivery ? 'w-1/2 border-r' : 'w-full'">Repas</p>
-            <p v-if="kd.canDelivery" class="w-1/2 border-l">Plateau</p>
-          </div>
-        </div>
-      </div>
-      <div class="meals-body">
-        <template v-for="user in getAllUserWithData" :key="user.id">
-          <div class="user-row">
-            <div class="user-label">
-              <p>{{ user.civility }} {{ user.lastname }} {{ user.firstname }}</p>
-            </div>
-            <div class="meals-case-container" :class="kd.canDelivery && !isStaffMealView ? 'double-checkbox' : ''"
-              v-for="kd in user.values" :key="kd.id">
-              <div class="custom-checkbox" :class="kd.meal ? 'active' : ''"></div>
-              <div v-if="kd.canDelivery && !isStaffMealView" class="custom-checkbox"
-                :class="kd.delivery ? 'active' : ''" @click="userNewEvent"></div>
-            </div>
-          </div>
-          <div class="guest-row" v-for="guest in user.guests">
-            <div class="user-label" :title="`Invité(s) du ${guest.dateStart} au ${guest.dateEnd}`">
-              <p>+ {{ guest.nbGuests }} Invités</p>
-            </div>
-            <div v-for="kd in guest.values" :key="kd.id">
-              <div class="meals-case-container" :class="kd.canDelivery ? 'double-checkbox' : ''">
-                <div class="custom-checkbox" :class="kd.meal ? 'active' : ''"></div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-    </section>
+    <Meals :isStaffMealView="isStaffMealView" :date="date" :kindMeals="getAllKindMeal"
+      :usersWithData="getAllUserWithData" />
     <div class="general-footer">
       <div class="btn-left-container">
         <button class="btn" @click="addEventModal()">Événement</button>
@@ -2311,6 +2830,8 @@ export default {
         </button>
       </div>
       <div class="btn-right-container">
+        <button class="btn" @click="showDetailModal()">Détails</button>
+        <button class="btn" @click="showHistoryModal()">Historique</button>
       </div>
     </div>
   </div>

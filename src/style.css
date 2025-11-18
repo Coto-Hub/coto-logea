@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Love+Ya+Like+A+Sister&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Grandstander:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
 
 @font-face {
     font-family: 'Lazy Dog Regular';
@@ -22,6 +23,7 @@
 html,
 body {
     @apply w-full h-full;
+    font-family: "EB Garamond", serif;
 }
 
 #app {
@@ -37,6 +39,13 @@ body {
 .grandstander {
     font-family: "Grandstander", cursive;
     font-optical-sizing: auto;
+    font-style: normal;
+}
+
+.eb-garamond {
+    font-family: "EB Garamond", serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
     font-style: normal;
 }
 

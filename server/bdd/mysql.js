@@ -9,6 +9,7 @@ if (process.env.DATABASE) {
         port: 3306,
         user: process.env.BDD_USER,
         password: process.env.BDD_PASSWORD,
+        timezone: 'Z'
     }
     if (process.env.SSH_HOST) {
         const tunnelConfig = {

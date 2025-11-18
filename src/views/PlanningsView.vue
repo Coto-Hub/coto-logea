@@ -2,27 +2,50 @@
 import Swal from "sweetalert2";
 import moment from 'moment';
 import { socket, state } from "@/socket";
+import { defineAsyncComponent } from 'vue';
 import IconMinus from "@/components/icons/IconMinus.vue";
 import IconPlus from "@/components/icons/IconPlus.vue";
 import IconEdit from "@/components/icons/IconEdit.vue";
 import IconImg from "@/components/icons/IconImg.vue";
 import IconPaint from "@/components/icons/IconPaint.vue";
-import Planning from "@/components/Planning.vue";
-import PlanningWeek from "@/components/PlanningWeek.vue";
+import WaitingComponent from "@/components/WaitingComponent.vue";
+import WaitingScreen from "@/components/WaitingScreen.vue";
 import ImgEdit from "@/components/ImgEdit.vue";
-import DayContainer from "@/components/DayContainer.vue";
+
+const PlanningComponent = defineAsyncComponent({
+  loader: () => import('@/components/Planning.vue'),
+  loadingComponent: WaitingComponent,
+  delay: 0,
+  timeout: 10000,
+});
+
+const PlanningWeek = defineAsyncComponent({
+  loader: () => import('@/components/PlanningWeek.vue'),
+  // loadingComponent: WaitingScreen,
+  delay: 0,
+  timeout: 10000,
+});
+
+const PlanningMonth = defineAsyncComponent({
+  loader: () => import('@/components/PlanningMonth.vue'),
+  // loadingComponent: WaitingScreen,
+  delay: 0,
+  timeout: 10000,
+});
+
 
 export default {
   name: "app-planning",
   components: {
-    DayContainer,
+    PlanningComponent,
+    PlanningMonth,
+    PlanningWeek,
+    WaitingScreen,
     IconMinus,
     IconPlus,
     IconEdit,
     IconImg,
     IconPaint,
-    Planning,
-    PlanningWeek,
     ImgEdit
   },
   props: {
@@ -61,6 +84,8 @@ export default {
         callbackConfirm: null,
         container: null,
       },
+      loadingPlanning: true,
+      loadingPrint: false,
     }
   },
   emits: [],
@@ -70,7 +95,9 @@ export default {
     this.updateDate();
   },
   methods: {
+    // Date input methods
     updateDate() {
+      this.resetLoadingPlanning();
       this.skipInit = false;
       this.date.string = `${this.months[this.date.month]} ${this.date.year}`;
 
@@ -115,6 +142,7 @@ export default {
       this.date.year += int;
       this.updateDate();
     },
+    // Modals
     addAnimationModal(e) {
       Swal.mixin({
         customClass: {
@@ -847,8 +875,569 @@ export default {
       //   animationId: r.animationId,
       // });
     },
+    // Children Modal
+    addAnimationPlanningModal(date) {
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        html: `
+            <div class="add-anim-day-modal-container modal-container">
+              <div class="animation-search-input">
+                <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" />
+                <div class="search-result">
+                  <ul id="update-anim-list">
+                    ${state.animations.filter(a => a.isActive).map(a => `
+                      <li data-id="${a.id}">
+                        <p>${a.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
+              <div class="content-input">
+                <input type="text" class="btn-input" id="planning-content-input" placeholder="Texte de remplacement" value=""/>
+              </div>
+              <div class="reccurence-inputs">
+                <h2>Heure de la journée</h2>
+                <div class="reccurence-hour">
+                  <input type="text" class="btn-input" id="planning-hour-input" placeholder="15" />
+                  <div class="points-icon"></div>
+                  <input type="text" class="btn-input" id="planning-minute-input" placeholder="00" />
+                </div>
+              </div>
+            </div>
+            `,
+        confirmButtonText: 'Ajouter',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        willOpen: () => {
+          document.getElementById('update-anim-list').addEventListener('update', () => {
+            const list = document.getElementById('update-anim-list');
+            list.innerHTML = state.animations.filter(a => a.isActive).map(a => `<li data-id="${a.id}"><p>${a.label}</p></li>`).join('');
+          });
+          document.getElementById('update-anim-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-anim-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-anim-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-anim-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-anim-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-anim-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
+          document.getElementById('planning-hour-input').addEventListener('input', (e) => {
+            if (e.target.value != '00') {
+              if (e.target.value.length && e.target.value[0] == '0') {
+                e.target.value = '0' + (e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "");
+              }
+              else {
+                e.target.value = e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "";
+              }
+            }
+            if (e.target.value.length == 1 && e.target.value > 2) {
+              e.target.value = '0' + e.target.value;
+            }
+            if (e.target.value.length > 2) {
+              e.target.value = e.target.value.slice(0, 2);
+            }
+            if (e.target.value.length == 2) {
+              document.getElementById('planning-minute-input').focus();
+            }
+          });
+          document.getElementById('planning-hour-input').addEventListener('focusout', (e) => {
+            if (e.target.value.length == 1) {
+              e.target.value = '0' + e.target.value;
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('input', (e) => {
+            if (e.target.value != '00') {
+              if (e.target.value.length && e.target.value[0] == '0') {
+                e.target.value = '0' + (e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "");
+              }
+              else {
+                e.target.value = e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "";
+              }
+            }
+            if (e.target.value.length == 1 && e.target.value > 5) {
+              e.target.value = '0' + e.target.value;
+            }
+            if (e.target.value.length > 2) {
+              e.target.value = e.target.value.slice(0, 2);
+            }
+            if (e.target.value.length == 2) {
+              document.getElementById('planning-minute-input').focus();
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('focusout', (e) => {
+            e.target.value = e.target.value - e.target.value % 5;
+            if (e.target.value.length == 1) {
+              e.target.value = '0' + e.target.value;
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('keydown', (e) => {
+            if (e.key == "Backspace" && e.target.value.length == 0) {
+              document.getElementById('planning-hour-input').focus();
+            }
+          });
+        },
+        preConfirm: () => {
+          const values = {
+            content: document.getElementById('planning-content-input').value,
+            animationId: document.getElementById('search-anim-label').dataset.id,
+            hour: document.getElementById('planning-hour-input').value,
+            minute: document.getElementById('planning-minute-input').value,
+          };
+
+          if (values.animationId == "null") {
+            Swal.showValidationMessage(`Vous devez sélectionner une animation.`);
+          }
+          if (!values.hour) {
+            values.hour = "15";
+          }
+          if (!values.minute) {
+            values.minute = "00";
+          }
+
+          values.dateTime = moment(date).set({ hour: values.hour, minute: values.minute }).format('YYYY-MM-DD HH:mm:ss');
+          const current = state.animations.find(a => a.id == values.animationId);
+          values.iconId = current.icons.length > 0 ? current.icons[Math.floor(Math.random() * current.icons.length)] : null;
+          if (values.content == "") {
+            values.content = current.label;
+          }
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          socket.emit("add animation planning", data.value);
+        }
+      });
+    },
+    customPlanningModal(date, e) {
+      if (e) {
+        e.stopPropagation();
+      }
+      const current = state.plannings.find(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') && p.animationId == null);
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        html: `
+            <div class="add-anim-day-modal-container modal-container">
+              <input type="text" id="content-anim-label" class="btn-input" value="${current ? current.content : ''}" placeholder="Texte a afficher" />
+            </div>
+            `,
+        confirmButtonText: current ? 'Enregistrer' : 'Ajouter',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        preConfirm: () => {
+          const values = {
+            content: document.getElementById('content-anim-label').value,
+          };
+
+          values.dateTime = moment(date).set({ hour: 0, minute: 0 }).format('YYYY-MM-DD HH:mm:ss');
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          if (current) {
+            if (current.content == "") {
+              socket.emit("delete animation planning", current.id);
+            }
+            else {
+              data.value.id = current.id;
+              socket.emit("edit animation planning", data.value);
+            }
+          }
+          else {
+            socket.emit("add animation planning", data.value);
+          }
+        }
+      });
+    },
+    editPlanningModal(date, e) {
+      if (e) {
+        e.stopPropagation();
+      }
+      const planningToString = state.plannings.filter(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD')).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)).map(p => {
+        return `
+                <li data-id="${p.id}">
+                    <p><span>${moment(p.dateTime).format('HH[h]mm')}:</span>${p.content}</p>
+                    <div class="inputs">
+                        <div class="icon edit">${this.editIcon}</div>
+                        <div class="icon trash">${this.trashIcon}</div>
+                    </div>
+                </li>`;
+      }).join('');
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        html: `
+          <div class="edit-planning-container modal-container">
+            <ul id="update-planning-list">
+              ${planningToString}
+            </ul>
+          </div>
+        `,
+        confirmButtonText: 'Fermer',
+        showCancelButton: false,
+        willOpen: () => {
+          document.getElementById('update-planning-list').addEventListener('update', () => {
+            const list = document.getElementById('update-planning-list');
+            const contentHtml = state.plannings.filter(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD')).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)).map(p => {
+              return `
+                <li data-id="${p.id}">
+                    <p><span>${moment(p.dateTime).format('HH[h]mm')}:</span>${p.content}</p>
+                    <div class="inputs">
+                        <div class="icon edit">${this.editIcon}</div>
+                        <div class="icon trash">${this.trashIcon}</div>
+                    </div>
+                </li>`;
+            }).join('');
+            if (!contentHtml) {
+              Swal.clickConfirm();
+            }
+            list.innerHTML = contentHtml;
+          });
+          document.getElementById('update-planning-list').addEventListener('click', (e) => {
+            if (e.target.closest('div').classList.contains('icon')) {
+              const id = e.target.closest('li').dataset.id;
+              if (e.target.closest('div').classList.contains('edit')) {
+                this.editAnimationPlanningModal(id);
+              }
+              else if (e.target.closest('div').classList.contains('trash')) {
+                this.deleteAnimationPlanningModal(id);
+              }
+            }
+            return;
+          });
+        },
+      });
+    },
+    editAnimationPlanningModal(id) {
+      const animation = state.plannings.find(a => a.id == id);
+      const anim = state.animations.find(a => a.id == animation.animationId);
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `${this.days[moment(animation.dateTime).day()]} ${moment(animation.dateTime).date()} ${this.months[moment(animation.dateTime).month()]}`,
+        html: `
+          <div class="edit-anim-day-modal-container modal-container">
+            <div class="animation-search-input">
+              <input type="text" class="btn-input" value="${anim.label}" disabled/>
+            </div>
+            <div class="content-input">
+              <input type="text" class="btn-input" id="planning-content-input" placeholder="Texte de remplacement" value="${anim.label == animation.content ? '' : animation.content}"/>
+            </div>
+            <div class="reccurence-inputs">
+              <h2>Heure de la journée</h2>
+              <div class="reccurence-hour">
+                <input type="text" class="btn-input" id="planning-hour-input" value="${moment(animation.dateTime).format('HH')}" placeholder="00" />
+                <div class="points-icon"></div>
+                <input type="text" class="btn-input" id="planning-minute-input" value="${moment(animation.dateTime).format('mm')}" placeholder="00" />
+              </div>
+            </div>
+          </div>
+          `,
+        confirmButtonText: 'Enregistrer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        willOpen: () => {
+          document.getElementById('planning-hour-input').addEventListener('input', (e) => {
+            if (e.target.value != '00') {
+              if (e.target.value.length && e.target.value[0] == '0') {
+                e.target.value = '0' + (e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "");
+              }
+              else {
+                e.target.value = e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "";
+              }
+            }
+            if (e.target.value.length == 1 && e.target.value > 2) {
+              e.target.value = '0' + e.target.value;
+            }
+            if (e.target.value.length > 2) {
+              e.target.value = e.target.value.slice(0, 2);
+            }
+            if (e.target.value.length == 2) {
+              document.getElementById('planning-minute-input').focus();
+            }
+          });
+          document.getElementById('planning-hour-input').addEventListener('focusout', (e) => {
+            if (e.target.value.length == 1) {
+              e.target.value = '0' + e.target.value;
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('input', (e) => {
+            if (e.target.value != '00') {
+              if (e.target.value.length && e.target.value[0] == '0') {
+                e.target.value = '0' + (e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "");
+              }
+              else {
+                e.target.value = e.target.value && parseInt(e.target.value) ? parseInt(e.target.value) : "";
+              }
+            }
+            if (e.target.value.length == 1 && e.target.value > 5) {
+              e.target.value = '0' + e.target.value;
+            }
+            if (e.target.value.length > 2) {
+              e.target.value = e.target.value.slice(0, 2);
+            }
+            if (e.target.value.length == 2) {
+              document.getElementById('planning-minute-input').focus();
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('focusout', (e) => {
+            e.target.value = e.target.value - e.target.value % 5;
+            if (e.target.value.length == 1) {
+              e.target.value = '0' + e.target.value;
+            }
+          });
+          document.getElementById('planning-minute-input').addEventListener('keydown', (e) => {
+            if (e.key == "Backspace" && e.target.value.length == 0) {
+              document.getElementById('planning-hour-input').focus();
+            }
+          });
+        },
+        preConfirm: () => {
+          const values = {
+            id,
+            hour: document.getElementById('planning-hour-input').value,
+            minute: document.getElementById('planning-minute-input').value,
+            content: document.getElementById('planning-content-input').value,
+          };
+
+          if (!values.hour || !values.minute) {
+            Swal.showValidationMessage(`Vous devez sélectionner une heure.`);
+          }
+          if (values.content == "") {
+            values.content = anim.label;
+          }
+
+          values.dateTime = moment(animation.dateTime).set({ hour: values.hour, minute: values.minute }).format('YYYY-MM-DD HH:mm:ss');
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          socket.emit("edit animation planning", data.value);
+        }
+        this.editPlanningModal(animation.dateTime);
+      });
+    },
+    deleteAnimationPlanningModal(id) {
+      const animation = state.plannings.find(a => a.id == id);
+      Swal.fire({
+        title: 'Êtes-vous sûr ?',
+        text: `Vous allez supprimer l'animation "${animation.content}" le ${this.days[moment(animation.dateTime).day()]} ${moment(animation.dateTime).date()} ${this.months[moment(animation.dateTime).month()]} à ${moment(animation.dateTime).format('HH:mm').replace(':', 'h')}`,
+        showCancelButton: true,
+        confirmButtonText: 'Oui',
+        cancelButtonText: 'Non',
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false,
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          socket.emit("delete animation planning", id);
+        }
+        this.editPlanningModal(animation.dateTime);
+      });
+    },
+    editImgPlanningModal(date, placement, e) {
+      if (e) {
+        e.stopPropagation();
+      }
+      const animIdList = state.plannings.filter(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD')).map(p => p.animationId ?? 0);
+      const iconsChoice = state.icons.filter(i => animIdList.includes(i.animationId));
+      const currentDecoration = state.decorations.find(d => moment(d.date).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') && (placement == null || d.placementChoice == placement));
+      Swal.mixin({
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        html: `
+          <div class="edit-decoration-container modal-container" id="edit-decoration-container" data-id="${currentDecoration ? currentDecoration.id : null}">
+            <div class="icons-list" id="icons-list-edit" data-choice="${currentDecoration ? currentDecoration.iconId : null}">
+              <div class="icon-container" id="none-icon" data-id="null">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              </div>
+              ${iconsChoice.map(icon => `
+                <div class="icon-container" data-id="${icon.id}" data-animation-id="${icon.animationId}">
+                  <img src="${state.url}${icon.path.replace('./', '/')}" loading="lazy" alt="${icon.label}" />
+                </div>
+              `).join('')}
+            </div>
+            ${placement == null ? `
+            <div class="icon-placement">
+              <h2>Placement</h2>
+              <div id="placement-choice" class="radio-choice-container" data-choice="${currentDecoration ? currentDecoration.placementChoice : 1}">
+                <div class="radio-choice" data-radio="1">
+                  <span class="radio"></span>
+                  <p>Au-dessus</p>
+                </div>
+                <div class="radio-choice" data-radio="2">
+                  <span class="radio"></span>
+                  <p>En dessous</p>
+                </div>
+              </div>
+            </div>
+            ` : ``}
+          </div>
+        `,
+        confirmButtonText: 'Enregistrer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Annuler',
+        reverseButtons: true,
+        showDenyButton: false,
+        willOpen: () => {
+          const currentIconChoice = document.getElementById('icons-list-edit').dataset.choice;
+          if (currentIconChoice) {
+            document.getElementById('icons-list-edit').querySelector(`.icon-container[data-id="${currentIconChoice}"]`).classList.add('active');
+          }
+          document.getElementById('icons-list-edit').addEventListener('click', (e) => {
+            if (e.target.closest('div').classList.contains('icon-container') && !e.target.closest('div').classList.contains('active')) {
+              document.getElementById('icons-list-edit').querySelectorAll('.icon-container').forEach(icon => {
+                icon.classList.remove('active');
+              });
+              e.target.closest('div').classList.add('active');
+              document.getElementById('icons-list-edit').dataset.choice = e.target.closest('div').dataset.id;
+            }
+          });
+          if (document.getElementById('placement-choice')) {
+            const currentPlacementChoice = document.getElementById('placement-choice').dataset.choice;
+            if (currentPlacementChoice && currentPlacementChoice != "null") {
+              document.getElementById('placement-choice').querySelector(`.radio-choice[data-radio="${currentPlacementChoice}"]`).classList.add('active');
+            }
+            else {
+              document.getElementById('placement-choice').querySelector(`.radio-choice[data-radio="1"]`).classList.add('active');
+            }
+            document.getElementById('placement-choice').addEventListener('click', (e) => {
+              if (e.target.closest('div').classList.contains('radio-choice') && !e.target.closest('div').classList.contains('active')) {
+                document.getElementById('placement-choice').querySelectorAll('.radio-choice').forEach(icon => {
+                  icon.classList.remove('active');
+                });
+                e.target.closest('div').classList.add('active');
+                document.getElementById('placement-choice').dataset.choice = e.target.closest('div').dataset.radio;
+              }
+            });
+          }
+        },
+        preConfirm: () => {
+          const values = {
+            id: parseInt(document.getElementById('edit-decoration-container').dataset.id) ?? null,
+            iconId: parseInt(document.getElementById('icons-list-edit').dataset.choice) ?? null,
+            placementChoice: placement ? placement : parseInt(document.getElementById('placement-choice').dataset.choice) ?? 1,
+            date: moment(date).format('YYYY-MM-DD')
+          }
+          if (!values.iconId && !values.id) {
+            Swal.showValidationMessage(`Vous devez sélectionner une icône.`);
+          }
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          if (data.value.id) {
+            if (data.value.iconId) {
+              socket.emit("edit decoration", data.value);
+            }
+            else {
+              socket.emit("delete decoration", data.value.id);
+            }
+          }
+          else {
+            socket.emit("add decoration", data.value);
+
+          }
+        }
+      });
+    },
+    deleteCustomPlanningModal(date) {
+      const current = state.plannings.find(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') && p.animationId == null);
+      if (!current) {
+        return;
+      }
+      Swal.fire({
+        title: 'Êtes-vous sûr ?',
+        text: `Vous allez supprimer le texte personnalisé du ${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        showCancelButton: true,
+        confirmButtonText: 'Oui',
+        cancelButtonText: 'Non',
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-cancel",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false,
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const decorations = state.decorations.filter(d => moment(d.date).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD')).map(d => d.id);
+          socket.emit("delete animation planning", current.id);
+          if (decorations.length > 0) {
+            socket.emit("delete decorations planning", decorations);
+          }
+        }
+      });
+    },
+    // Impression
     openPrint() {
-      document.getElementById('planning-wait').classList.add('active');
       const listWeeks = [];
       this.weeks.map(w => {
         const startDate = moment(w[0].date).set('hour', 0).set('minute', 0).set('second', 0).format('YYYY-MM-DD HH:mm:ss');
@@ -893,17 +1482,21 @@ export default {
             }
           });
         },
-      }).then((result) => {
-        document.getElementById('planning-wait').classList.remove('active');
+        // }).then((result) => {
+        //   document.getElementById('planning-wait').classList.remove('active');
       });
     },
     togglePrintMonth() {
-      this.printMonth = !this.printMonth;
-      document.getElementById('planning-wait').classList.remove('active');
+      this.loadingPrint = !this.printMonth;
+      setTimeout(() => {
+        this.printMonth = !this.printMonth;
+      }, 10);
     },
     togglePrintWeek() {
-      this.printWeek.isActive = !this.printWeek.isActive;
-      document.getElementById('planning-wait').classList.remove('active');
+      this.loadingPrint = !this.printWeek.isActive;
+      setTimeout(() => {
+        this.printWeek.isActive = !this.printWeek.isActive;
+      }, 10);
     },
     customiseImgModal(container, image) {
       this.editImg.container = container;
@@ -916,7 +1509,6 @@ export default {
           document.getElementById('none-icon').classList.add('active');
           document.getElementById('imported-icon').src = "";
           document.getElementById('imported-icon').dataset.src = "";
-          // this.editImg.container.remove();
         }
         this.resetImgModal();
       };
@@ -947,6 +1539,12 @@ export default {
       this.editImg.img = null;
       this.editImg.container = null;
     },
+    resetLoadingPlanning() {
+      this.loadingPlanning = true;
+      setTimeout(() => {
+        this.loadingPlanning = false;
+      }, 10);
+    }
   },
   computed: {
     getUrl() {
@@ -996,7 +1594,7 @@ export default {
         return `
           <li data-id="${a.id}">
             <p>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+              <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
               ${state.animations.find(anim => anim.id == a.id).label}
@@ -1020,21 +1618,6 @@ export default {
       //     <p>${r.label}</p>
       //   </li>
       // `).join('');
-    },
-    getAnimationsForMonth() {
-      if (this.weeks.length == 0) {
-        return false;
-      }
-      const firstDay = this.weeks[0][0].date;
-      const lastDay = this.weeks[this.weeks.length - 1][this.weeks[this.weeks.length - 1].length - 1].date;
-      return state.plannings.filter(p => moment(p.dateTime).isBetween(firstDay, lastDay)).map((a) => {
-        return {
-          id: a.id,
-          content: a.content,
-          date: a.dateTime.split('T')[0],
-          hour: moment(a.dateTime).minute() == 0 ? moment(a.dateTime).format('HH') + 'h' : moment(a.dateTime).format('HH:mm').replace(':', 'h'),
-        };
-      });
     }
   }
 };
@@ -1050,38 +1633,10 @@ export default {
     <div class="btn-container right">
       <button class="btn" @click="openPrint">Exporter</button>
     </div>
-    <section class="general-input">
-      <table class="planning">
-        <thead class="planning-head">
-          <tr>
-            <th>Lundi</th>
-            <th>Mardi</th>
-            <th>Mercredi</th>
-            <th>Jeudi</th>
-            <th>Vendredi</th>
-            <th>Samedi</th>
-            <th>Dimanche</th>
-          </tr>
-        </thead>
-        <tbody class="planning-body" id="planning-body">
-          <tr v-for="week in weeks">
-            <td v-for="day in week">
-              <DayContainer :day="day" :months="months" :days="days" @customiseImgModal="customiseImgModal" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="planning-init" v-if="getAnimationsForMonth.length == 0 && !skipInit">
-        <div class="init-container">
-          <h2>Initialisation du planning du mois</h2>
-          <p>Intégrer les récurrences ?</p>
-          <div class="choice-container">
-            <button class="btn btn-cancel" @click="skipInit = true">Annuler</button>
-            <button class="btn btn-confirm" @click="initReccurence">Confirmer</button>
-          </div>
-        </div>
-      </div>
-    </section>
+    <PlanningComponent :loading="loadingPlanning" :weeks="weeks" @customiseImgModal="customiseImgModal"
+      @customPlanningModal="customPlanningModal" @addAnimationPlanningModal="addAnimationPlanningModal"
+      @editImgPlanningModal="editImgPlanningModal" @editPlanningModal="editPlanningModal"
+      @deleteCustomPlanningModal="deleteCustomPlanningModal" />
     <div class="general-form w-1/3 pt-1">
       <div class="general-form-date">
         <button class="date-btn" @click="updateMonth(-1)">
@@ -1117,7 +1672,7 @@ export default {
         </button>
       </div>
     </div>
-    <div class="export-wait" id="planning-wait">
+    <!-- <div class="export-wait" id="planning-wait">
       <div class="svg-container">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
           stroke="currentColor">
@@ -1125,11 +1680,15 @@ export default {
             d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
         </svg>
       </div>
+    </div> -->
+    <div>
+      <WaitingScreen v-if="loadingPrint" />
+      <PlanningMonth v-if="printMonth" :weeks="weeks" :monthString="months[date.month]"
+        :month="`${date.month}-${date.year}`" @customiseImgModal="customiseImgModal"
+        @closePlanning="togglePrintMonth" />
+      <PlanningWeek v-if="printWeek.isActive" :startDate="getPrintWeekStartDate" @closePlanningWeek="togglePrintWeek"
+        @customiseImgModal="customiseImgModal" />
     </div>
-    <Planning :weeks="weeks" :monthString="months[date.month]" :month="`${date.month}-${date.year}`"
-      @customiseImgModal="customiseImgModal" v-if="getPrintMonth" @closePlanning="togglePrintMonth" />
-    <PlanningWeek :startDate="getPrintWeekStartDate" v-if="getPrintWeek" @closePlanningWeek="togglePrintWeek"
-      @customiseImgModal="customiseImgModal" />
     <ImgEdit v-if="editImg.isActive" :img="editImg.img" @closeImgEdit="editImg.callbackClose()"
       @confirmImgEdit="editImg.callbackConfirm" />
   </div>

@@ -1,6 +1,5 @@
 <script>
 import moment from 'moment';
-import Swal from "sweetalert2";
 import { state, socket } from "@/socket";
 import html2canvas from 'html2canvas';
 
@@ -11,6 +10,10 @@ export default {
         startDate: {
             type: String,
             required: true
+        },
+        refreshKey: {
+            type: Number,
+            required: true,
         },
     },
     data() {
@@ -61,11 +64,6 @@ export default {
         saveConfig() {
             const config = state.week_configs.find(c => c.week == `${moment(this.startDate).week()}-${moment(this.startDate).year()}`);
             if (config) {
-                console.log({
-                    id: config.id,
-                    text: this.choice.text,
-                    background: this.choice.background,
-                });
                 socket.emit('edit week config', {
                     id: config.id,
                     text: this.choice.text,
@@ -154,7 +152,7 @@ export default {
                                 id: planning.id,
                                 content: planning.content,
                                 hour: moment(planning.dateTime).minute() == 0 ? moment(planning.dateTime).format('HH') + 'h' : moment(planning.dateTime).format('HH:mm').replace(':', 'h'),
-                                dayPart: moment(planning.dateTime).hour() < 12 ? 'am' : 'pm',
+                                dayPart: moment(planning.dateTime).hour() <= 12 ? 'am' : 'pm',
                             }
                         }
                     }
@@ -166,16 +164,23 @@ export default {
                     custom: isCustom ? elements[0] : null,
                     icons: state.decorations.filter((d) => moment(d.date).isSame(currentDate, 'day')).map(
                         (decoration) => {
-                            const iconAnimation = state.animations.find((a) => a.icons.find((i) => i.id == decoration.iconId));
-                            if (iconAnimation && iconAnimation.icons) {
-                                const icon = iconAnimation.icons.find((i) => i.id == decoration.iconId);
-                                return {
-                                    id: decoration.id,
-                                    placement: decoration.placementChoice,
-                                    iconPath: `${state.url}${icon.path.replace('./', '/')}`,
-                                    iconName: icon.name,
-                                }
+                            const icon = state.icons.find((i) => i.id == decoration.iconId);
+                            return {
+                                id: decoration.id,
+                                placement: decoration.placementChoice,
+                                iconPath: `${state.url}${icon.path.replace('./', '/')}`,
+                                iconName: icon.name,
                             }
+                            // const iconAnimation = state.animations.find((a) => a.icons.find((i) => i.id == decoration.iconId));
+                            // if (iconAnimation && iconAnimation.icons) {
+                            //     const icon = iconAnimation.icons.find((i) => i.id == decoration.iconId);
+                            //     return {
+                            //         id: decoration.id,
+                            //         placement: decoration.placementChoice,
+                            //         iconPath: `${state.url}${icon.path.replace('./', '/')}`,
+                            //         iconName: icon.name,
+                            //     }
+                            // }
                         }
                     )
                 });
@@ -448,7 +453,7 @@ export default {
                         }
 
                         .icon-container {
-                            @apply max-w-24 self-center;
+                            @apply max-w-24 self-center px-1;
                         }
                     }
                 }
@@ -460,12 +465,12 @@ export default {
                             @apply w-auto;
 
                             p {
-                                @apply leading-8;
+                                @apply leading-8 w-full;
                             }
                         }
 
                         .icon-container {
-                            @apply flex flex-col max-w-none w-1/2 items-center self-center mb-0;
+                            @apply flex flex-col max-w-none w-1/4 items-center self-center mb-0;
 
                             img {
                                 @apply w-auto object-center max-h-[8vh] max-w-[90%];

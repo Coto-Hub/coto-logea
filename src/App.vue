@@ -2,6 +2,68 @@
 import Swal from "sweetalert2";
 import { RouterLink, RouterView } from 'vue-router';
 import { socket, state } from "@/socket";
+import moment from "moment";
+
+moment.locale('fr', {
+  months: 'Janvier_Février_Mars_Avril_Mai_Juin_Juillet_Août_Septembre_Octobre_Novembre_Décembre'.split('_'),
+  monthsShort: 'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split('_'),
+  monthsParseExact: true,
+  weekdays: 'Dimanche_Lundi_Mardi_Mercredi_Jeudi_Vendredi_Samedi'.split('_'),
+  weekdaysShort: 'dim._lun._mar._mer._jeu._ven._sam.'.split('_'),
+  weekdaysMin: 'Di_Lu_Ma_Me_Je_Ve_Sa'.split('_'),
+  weekdaysParseExact: true,
+  longDateFormat: {
+    LT: 'HH:mm',
+    LTS: 'HH:mm:ss',
+    L: 'DD/MM/YYYY',
+    LL: 'D MMMM YYYY',
+    LLL: 'D MMMM YYYY HH:mm',
+    LLLL: 'dddd D MMMM YYYY HH:mm'
+  },
+  calendar: {
+    sameDay: '[Aujourd’hui à] LT',
+    nextDay: '[Demain à] LT',
+    nextWeek: 'dddd [à] LT',
+    lastDay: '[Hier à] LT',
+    lastWeek: 'dddd [dernier à] LT',
+    sameElse: 'L'
+  },
+  relativeTime: {
+    future: 'dans %s',
+    past: 'il y a %s',
+    s: 'quelques secondes',
+    m: 'une minute',
+    mm: '%d minutes',
+    h: 'une heure',
+    hh: '%d heures',
+    d: 'un jour',
+    dd: '%d jours',
+    M: 'un mois',
+    MM: '%d mois',
+    y: 'un an',
+    yy: '%d ans'
+  },
+  dayOfMonthOrdinalParse: /\d{1,2}(er|e)/,
+  ordinal: function (number) {
+    return number + (number === 1 ? 'er' : 'e');
+  },
+  meridiemParse: /PD|MD/,
+  isPM: function (input) {
+    return input.charAt(0) === 'M';
+  },
+  // In case the meridiem units are not separated around 12, then implement
+  // this function (look at locale/id.js for an example).
+  // meridiemHour : function (hour, meridiem) {
+  //     return /* 0-23 hour, given meridiem token and hour 1-12 */ ;
+  // },
+  meridiem: function (hours, minutes, isLower) {
+    return hours < 12 ? 'PD' : 'MD';
+  },
+  week: {
+    dow: 1, // Monday is the first day of the week.
+    doy: 4  // Used to determine first week of the year.
+  }
+});
 
 export default {
   name: "App",
@@ -43,7 +105,7 @@ export default {
       <h1 class="font-semibold text-xl">{{ getCurrentName ?? "Villa" }}</h1>
       <nav class="nav-container">
         <RouterLink to="/">Accueil</RouterLink>
-        <!-- <RouterLink v-if="isConnected" to="/meals">Restauration</RouterLink> -->
+        <RouterLink v-if="isConnected" to="/meals">Restauration</RouterLink>
         <RouterLink v-if="isConnected" to="/plannings">Plannings</RouterLink>
         <RouterLink v-if="isConnected" to="/menus">Menus</RouterLink>
       </nav>
@@ -133,7 +195,8 @@ main {
     @apply rounded-2xl border-solid border-4 bg-white border-gray-500/70 overflow-hidden shadow shadow-gray-400;
 
 
-    .edit-user-btn {
+    .edit-user-btn,
+    .trash-user-btn {
       @apply absolute w-10 h-10 right-4 top-4 cursor-pointer;
 
       svg {
@@ -143,6 +206,18 @@ main {
       &:hover {
         svg {
           @apply stroke-gray-900/80 fill-neutral-300/60;
+        }
+      }
+
+      &.trash-user-btn {
+        @apply left-4 right-auto;
+
+        svg {
+          @apply stroke-red-500/60 fill-red-300/30;
+
+          &:hover {
+            @apply stroke-red-500/80 fill-red-300/60;
+          }
         }
       }
     }
@@ -362,7 +437,7 @@ main {
     }
 
     .icon {
-      @apply w-1/2 h-full flex justify-center items-center;
+      @apply w-1/3 h-full flex justify-center items-center;
     }
   }
 
@@ -419,7 +494,7 @@ main {
     .signle-list {
       li:hover {
         .inputs {
-          @apply w-20;
+          @apply w-32;
 
           svg:not(.order-icon) {
             @apply w-full h-full;
@@ -428,7 +503,8 @@ main {
       }
     }
 
-    .reccurence-list {
+    .reccurence-list,
+    .history-list {
       @apply space-y-0;
 
       &>li {
@@ -443,6 +519,19 @@ main {
 
           svg {
             @apply w-6 h-6 transition-all duration-500 mr-1;
+          }
+
+          .trash {
+            @apply mr-0;
+
+            .trash-icon {
+              @apply fill-none cursor-pointer stroke-2 max-w-8 opacity-50 w-full;
+              @apply stroke-red-500/60 fill-red-300/30;
+
+              &:hover {
+                @apply stroke-red-500/80 fill-red-300/60 opacity-100;
+              }
+            }
           }
         }
 
@@ -466,7 +555,7 @@ main {
           &>p {
             @apply shadow;
 
-            svg {
+            svg.arrow {
               @apply rotate-90;
             }
           }
@@ -503,6 +592,10 @@ main {
 
       li {
         @apply flex justify-between items-center w-full text-start py-1.5 px-3 border-b-2;
+
+        p {
+          @apply w-4/5 truncate;
+        }
 
         span {
           @apply font-semibold pr-1;
@@ -1142,11 +1235,7 @@ main {
 
     .btn-left-container,
     .btn-right-container {
-      @apply w-1/3 flex;
-    }
-
-    .btn-left-container {
-      @apply justify-around;
+      @apply w-1/3 flex justify-around;
     }
 
     .general-form-date {
@@ -1372,21 +1461,21 @@ main {
     @apply flex w-full h-full border-y-4 border-white/60 relative;
   }
 
-  .export-wait {
-    @apply absolute inset-0 bg-gray-500/30 hidden;
+  // .export-wait {
+  //   @apply absolute inset-0 bg-gray-500/30 hidden;
 
-    .svg-container {
-      @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 h-1/4;
-    }
+  //   .svg-container {
+  //     @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 h-1/4;
+  //   }
 
-    svg {
-      @apply w-full h-full animate-spin stroke-gray-500/70;
-    }
+  //   svg {
+  //     @apply w-full h-full animate-spin stroke-gray-500/70;
+  //   }
 
-    &.active {
-      @apply flex;
-    }
-  }
+  //   &.active {
+  //     @apply flex;
+  //   }
+  // }
 
   @screen md {
     @apply w-full;
@@ -1476,7 +1565,8 @@ main {
 
         &.edit-icon,
         &.img-icon,
-        &.paint-icon {
+        &.paint-icon,
+        &.trash-icon {
           @apply w-7 stroke-blue-600 stroke-2 fill-none absolute top-1 left-1;
 
           &:hover {
@@ -1485,7 +1575,8 @@ main {
         }
 
         &.img-icon,
-        &.paint-icon {
+        &.paint-icon,
+        &.trash-icon {
           @apply left-auto right-1 top-auto bottom-1 stroke-gray-600 fill-black/20;
 
           &:hover {
@@ -1495,6 +1586,10 @@ main {
 
         &.paint-icon {
           @apply right-auto left-1;
+        }
+
+        &.trash-icon {
+          @apply stroke-red-600;
         }
       }
 
@@ -1535,16 +1630,18 @@ main {
   @apply mx-0;
 
   .general-input {
-    @apply grid overflow-x-hidden overflow-y-scroll;
-    background-color: #f7d6e0;
-    grid-template-rows: 4rem auto;
+    @apply grid overflow-hidden bg-rose-100/60;
+    // @apply grid overflow-x-hidden overflow-y-scroll;
+    // background-color: #f7d6e0;
+    grid-template-rows: 4rem auto 2rem;
     height: calc(100% - 7rem);
 
     // .table-container {
     //   @apply absolute inset-0 top-[3.55rem] overflow-x-hidden overflow-y-scroll;
     // }
     .meals-body .user-row,
-    .meals-body .guest-row {
+    .meals-body .guest-row,
+    .meals-footer .total-row {
       @apply grid h-9 justify-start items-center w-full;
       grid-auto-flow: column;
       grid-template-columns: 16rem repeat(auto-fit, minmax(100px, 1fr));
@@ -1586,8 +1683,12 @@ main {
       }
     }
 
+    .meals-overflow {
+      @apply bg-stone-300/30;
+    }
+
     .meals-body {
-      @apply overflow-x-hidden overflow-y-scroll grid grid-flow-row self-baseline;
+      @apply overflow-hidden grid grid-flow-row self-baseline bg-red-100;
       // background-color: blue;
 
       .meals-case-container {
@@ -1646,21 +1747,47 @@ main {
           background-color: rgba(251, 111, 146, 0.2);
         }
 
-        &:last-child {
-          @apply border-b-2;
-        }
-
-        &:first-child {
-          @apply border-t-0;
-        }
-
         &:hover {
-          @apply bg-white/55 border-stone-500;
+          @apply bg-white border-black;
         }
 
         &.guest-row {
           p {
             @apply pl-4;
+          }
+        }
+      }
+    }
+
+    .meals-footer .total-row {
+      @apply font-semibold border-t-[3px] border-stone-700/40;
+
+      .total-kd,
+      .total-label {
+        @apply grid items-center border-l-2 border-stone-600/30;
+        @apply text-center;
+
+        &.total-label {
+          @apply border-none;
+        }
+
+        p {
+          @apply h-full align-middle flex justify-center items-center;
+        }
+
+        &.double {
+          @apply grid-cols-2;
+
+          p {
+            @apply border-stone-600/30;
+
+            &:first-child {
+              @apply border-r;
+            }
+
+            &:last-child {
+              @apply border-l;
+            }
           }
         }
       }
@@ -1779,6 +1906,35 @@ main {
     .choice-container {
       @apply flex space-x-4;
     }
+  }
+}
+
+// Loader 
+.waiting-general-input {
+  @apply flex flex-col space-y-3 justify-center items-center font-semibold;
+}
+
+.waiting-screen {
+  @apply absolute inset-0 bg-zinc-200/60 flex flex-col justify-center items-center space-y-4;
+
+  p {
+    @apply text-xl font-semibold text-zinc-800;
+  }
+}
+
+.waiting-box {
+  @apply w-72 h-8 rounded-full shadow-md border-[3px] border-[#e1415d]/40 shadow-gray-400/20;
+  background: linear-gradient(90deg,
+      rgba(225, 65, 93, 0.2),
+      rgba(225, 65, 93, 0.5),
+      rgba(225, 65, 93, 0.2));
+  background-size: 200% 100%;
+  animation: shimmer 500ms linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
   }
 }
 </style>

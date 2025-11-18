@@ -110,7 +110,6 @@ export default {
     this.resetFormData();
 
     socket.on("menus info", ({ allMenus }) => {
-      console.log(allMenus);
       this.resetFormData();
     });
   },
@@ -164,7 +163,6 @@ export default {
           dish: (this.getRow(object, `${letter}10`) + ` \n \n ` + this.getRow(object, `${letter}11`)).trim(),
           dessert: (this.getRow(object, `${letter}12`) + ` \n \n ` + this.getRow(object, `${letter}13`)).trim()
         };
-        console.log(object);
         const menuExist = state.menus.find(e => date.isSame(e.date, 'day'));
         if (menuExist) {
           returnObj[index].exist = true;

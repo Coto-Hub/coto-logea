@@ -8,6 +8,7 @@ export const state = reactive({
     company: {},
     menus: [],
     animations: [],
+    icons: [],
     reccurences: [],
     plannings: [],
     decorations: [],
@@ -29,7 +30,7 @@ export const socket = io(state.url, {
 socket.connect();
 
 // TODO: change back the URL when in production
-// state.url = "https://logea.coto-app.xyz/";
+state.url = "https://logea.coto-app.xyz/";
 
 let sessionObjEncrypt = localStorage.getItem("sessionObj");
 const sessionObj = sessionObjEncrypt ? CryptoJS.AES.decrypt(sessionObjEncrypt, window.navigator.userAgent) : false;
@@ -67,6 +68,14 @@ socket.on("animations info", ({ allAnimations }) => {
     const animList = document.getElementById("update-anim-list");
     if (animList) {
         animList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("icons info", ({ allIcons }) => {
+    state.icons = allIcons;
+    const iconList = document.getElementById("update-icon-list");
+    if (iconList) {
+        iconList.dispatchEvent(new Event("update"));
     }
 });
 
