@@ -568,6 +568,20 @@ main {
     }
   }
 
+  .history-modal-container {
+    .content-input {
+      @apply flex flex-wrap justify-around w-full;
+
+      h1 {
+        @apply w-full text-xl font-bold text-center;
+      }
+
+      h2 {
+        @apply text-lg font-medium text-center;
+      }
+    }
+  }
+
   .meal-list-container {
     .signle-list.default-list {
       li:first-child .order-container {
@@ -961,14 +975,14 @@ main {
     }
 
     .btn-add {
-      @apply absolute -right-1 -bottom-1 p-0.5 w-12 h-12 border-4 border-gray-300/70 z-10;
+      @apply absolute -right-1 -bottom-1 p-0.5 w-12 h-12 border-4 border-gray-300/70 z-10 bg-white;
 
       svg {
         @apply w-full h-full m-0;
       }
 
       &:hover {
-        @apply bg-gray-300/50 border-gray-300/70;
+        @apply bg-gray-100 border-gray-300/70;
       }
     }
   }
@@ -1163,11 +1177,15 @@ main {
       }
     }
 
-    .date-container {
-      @apply flex flex-col justify-center items-center space-y-2 text-center;
+    .content-input {
+      @apply flex justify-around w-3/4;
 
-      label {
-        @apply text-xl;
+      .date-container {
+        @apply space-y-1;
+
+        p {
+          @apply h-10 content-center text-xl font-bold tracking-widest;
+        }
       }
     }
   }
@@ -1297,6 +1315,39 @@ main {
   }
 }
 
+.triple-switch {
+  @apply w-2/3 h-12 flex items-center relative border-4 rounded-2xl outline-none cursor-pointer overflow-hidden;
+  @apply text-black/70 font-semibold border-neutral-300/70 bg-neutral-300/30;
+
+  .btn-switch-choice {
+    @apply w-1/3 z-10 h-full;
+
+    &:not(.active):hover {
+      @apply text-black;
+    }
+
+    &.active {
+      @apply text-black/90;
+    }
+  }
+
+  .btn-element {
+    @apply absolute w-1/3 h-full bg-white/80 transition-all duration-300 rounded-xl left-0;
+  }
+
+  &[data-value="event"] {
+    .btn-element {
+      @apply left-1/3;
+    }
+  }
+
+  &[data-value="guest"] {
+    .btn-element {
+      @apply left-2/3;
+    }
+  }
+}
+
 .btn:not(.disabled):hover {
   @apply bg-white/40 border-white/10 cursor-pointer;
 }
@@ -1394,6 +1445,21 @@ main {
 
   label:not(.btn) {
     @apply flex justify-around w-4/5 items-center font-medium;
+  }
+
+  .warning-label {
+    @apply text-xl text-orange-500 font-medium relative;
+
+    &::before,
+    &::after {
+      @apply absolute w-8 h-8 bg-no-repeat bg-center bg-contain -left-10;
+      content: '';
+      background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg fill="none" stroke="%23f97316" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    }
+
+    &::after {
+      @apply left-auto -right-10;
+    }
   }
 }
 

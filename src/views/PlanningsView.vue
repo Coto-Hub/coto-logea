@@ -885,7 +885,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        title: `${moment(date).format('dddd DD MMMM')}`,
         html: `
             <div class="add-anim-day-modal-container modal-container">
               <div class="animation-search-input">
@@ -1003,6 +1003,14 @@ export default {
               document.getElementById('planning-hour-input').focus();
             }
           });
+          document.getElementById('planning-content-input').addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
         },
         preConfirm: () => {
           const values = {
@@ -1022,7 +1030,7 @@ export default {
             values.minute = "00";
           }
 
-          values.dateTime = moment(date).set({ hour: values.hour, minute: values.minute }).format('YYYY-MM-DD HH:mm:ss');
+          values.dateTime = moment.utc(moment(date).set({ hour: values.hour, minute: values.minute })).format('YYYY-MM-DD HH:mm:ss');
           const current = state.animations.find(a => a.id == values.animationId);
           values.iconId = current.icons.length > 0 ? current.icons[Math.floor(Math.random() * current.icons.length)] : null;
           if (values.content == "") {
@@ -1050,7 +1058,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        title: `${moment(date).format('dddd DD MMMM')}`,
         html: `
             <div class="add-anim-day-modal-container modal-container">
               <input type="text" id="content-anim-label" class="btn-input" value="${current ? current.content : ''}" placeholder="Texte a afficher" />
@@ -1067,7 +1075,7 @@ export default {
             content: document.getElementById('content-anim-label').value,
           };
 
-          values.dateTime = moment(date).set({ hour: 0, minute: 0 }).format('YYYY-MM-DD HH:mm:ss');
+          values.dateTime = moment.utc(moment(date).set({ hour: 0, minute: 0 })).format('YYYY-MM-DD HH:mm:ss');
 
           return values;
         },
@@ -1109,7 +1117,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        title: `${moment(date).format('dddd DD MMMM')}`,
         html: `
           <div class="edit-planning-container modal-container">
             <ul id="update-planning-list">
@@ -1163,7 +1171,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `${this.days[moment(animation.dateTime).day()]} ${moment(animation.dateTime).date()} ${this.months[moment(animation.dateTime).month()]}`,
+        title: `${moment(animation.dateTime).format('dddd DD MMMM')}`,
         html: `
           <div class="edit-anim-day-modal-container modal-container">
             <div class="animation-search-input">
@@ -1259,7 +1267,7 @@ export default {
             values.content = anim.label;
           }
 
-          values.dateTime = moment(animation.dateTime).set({ hour: values.hour, minute: values.minute }).format('YYYY-MM-DD HH:mm:ss');
+          values.dateTime = moment.utc(moment(animation.dateTime).set({ hour: values.hour, minute: values.minute })).format('YYYY-MM-DD HH:mm:ss');
 
           return values;
         },
@@ -1274,7 +1282,7 @@ export default {
       const animation = state.plannings.find(a => a.id == id);
       Swal.fire({
         title: 'Êtes-vous sûr ?',
-        text: `Vous allez supprimer l'animation "${animation.content}" le ${this.days[moment(animation.dateTime).day()]} ${moment(animation.dateTime).date()} ${this.months[moment(animation.dateTime).month()]} à ${moment(animation.dateTime).format('HH:mm').replace(':', 'h')}`,
+        text: `Vous allez supprimer l'animation "${animation.content}" le ${moment(animation.dateTime).format('dddd DD MMMM [à] HH[h]mm')}`,
         showCancelButton: true,
         confirmButtonText: 'Oui',
         cancelButtonText: 'Non',
@@ -1307,7 +1315,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        title: `${moment(date).format('dddd DD MMMM')}`,
         html: `
           <div class="edit-decoration-container modal-container" id="edit-decoration-container" data-id="${currentDecoration ? currentDecoration.id : null}">
             <div class="icons-list" id="icons-list-edit" data-choice="${currentDecoration ? currentDecoration.iconId : null}">
@@ -1415,7 +1423,7 @@ export default {
       }
       Swal.fire({
         title: 'Êtes-vous sûr ?',
-        text: `Vous allez supprimer le texte personnalisé du ${this.days[moment(date).day()]} ${moment(date).date()} ${this.months[moment(date).month()]}`,
+        text: `Vous allez supprimer le texte personnalisé du ${moment(date).format('dddd DD MMMM')}`,
         showCancelButton: true,
         confirmButtonText: 'Oui',
         cancelButtonText: 'Non',

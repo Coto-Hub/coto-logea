@@ -37,8 +37,8 @@ export default {
             };
             const animations = state.plannings.filter(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(day.date).format('YYYY-MM-DD'));
             const decorations = state.decorations.filter(d => moment(d.date).format('YYYY-MM-DD') == moment(day.date).format('YYYY-MM-DD'));
+            planningDay.date = day.date;
             if (animations.length > 0) {
-                planningDay.date = day.date;
                 if (decorations.length) {
                     decorations.forEach(d => {
                         if (d.placementChoice == 1) {
@@ -67,13 +67,13 @@ export default {
                                 id: p.id,
                                 animationId: p.animationId,
                                 content: p.content,
-                                hour: moment(p.dateTime).minute() == 0 ? moment(p.dateTime).format('HH') + 'h' : moment(p.dateTime).format('HH:mm').replace(':', 'h'),
+                                hour: moment(p.dateTime).format('HH:mm').replace('h00', 'h'),
                                 label: anim ? anim.label : 'Animation supprimée',
-                                dateTime: p.dateTime,
+                                dateTime: moment(p.dateTime),
                             });
                         }
                     });
-                    planningDay.content.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+                    planningDay.content.sort((a, b) => moment(a.dateTime).diff(moment(b.dateTime)));
                 }
             }
             return planningDay;

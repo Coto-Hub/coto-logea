@@ -251,7 +251,7 @@ module.exports = class MealsRequest {
       const query = `
         SELECT rmc.Id AS 'rmc_Id', rmc.Id_user AS 'rmc_Id_user', rmc.Date_start AS 'rmc_Date_start', rmc.Date_end AS 'rmc_Date_end', rmc.Created AS 'rmc_Created', mc.Id AS 'mc_Id', mc.Id_kind_meal AS 'mc_Id_kind_meal', mc.Delivery AS 'mc_Delivery', mc.Monday AS 'mc_Monday', mc.Tuesday AS 'mc_Tuesday', mc.Wednesday AS 'mc_Wednesday', mc.Thursday AS 'mc_Thursday', mc.Friday AS 'mc_Friday', mc.Saturday AS 'mc_Saturday', mc.Sunday AS 'mc_Sunday', mc.Public_holiday AS 'mc_Public_holiday'
         FROM User_meal_configs rmc
-        LEFT JOIN Meal_configs mc ON mc.Id_user_meal_config = rmc.Id
+        LEFT JOIN Meal_configs_entries mc ON mc.Id_user_meal_config = rmc.Id
         WHERE rmc.Id_user IN (SELECT Id FROM Users WHERE Id_company = ?);
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -350,7 +350,7 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        UPDATE Meal_configs
+        UPDATE Meal_configs_entries
         SET Delivery = ?, Monday = ?, Tuesday = ?, Wednesday = ?, Thursday = ?, Friday = ?, Saturday = ?, Sunday = ?, Public_holiday = ?
         WHERE Id_kind_meal = ? AND Id_user_meal_config = ?;
       `;
@@ -370,7 +370,7 @@ module.exports = class MealsRequest {
     });
   }
 
-  async updateUserMealConfigEnd(userId, date) {
+  async updateUserMealConfigEnd(id, dateEnd) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -379,14 +379,67 @@ module.exports = class MealsRequest {
       const query = `
         UPDATE User_meal_configs
         SET Date_end = ?
-        WHERE Id_user = ? AND Date_end IS NULL;
+        WHERE Id = ?;
       `;
-      await this.connectionMysql.sql(query, [date, userId], (result) => {
+      await this.connectionMysql.sql(query, [dateEnd, id], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la modification de la configuration de repas"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async resetUserMealConfigEnd(configId) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        UPDATE User_meal_configs
+        SET Date_end = NULL
+        WHERE Id = ?;
+      `;
+      await this.connectionMysql.sql(query, [configId], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la modification de la configuration de repas"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async deleteUserMealConfigEntries(idMealConfig) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        DELETE FROM Meal_configs_entries
+        WHERE Id_user_meal_config = ?;
+      `;
+      await this.connectionMysql.sql(query, [idMealConfig], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression de la configuration des repas"
           };
         }
         if (result.rows) {
@@ -412,7 +465,7 @@ module.exports = class MealsRequest {
           console.log(result.error);
           info.alert = {
             title: 'Erreur',
-            error: "Une erreur est survenue lors de la supression de la configuration de repas"
+            error: "Une erreur est survenue lors de la supression de la configuration des repas"
           };
         }
         if (result.rows) {
@@ -430,7 +483,7 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Meal_configs (Id_user_meal_config, Id_kind_meal, Delivery, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, Public_holiday)
+        INSERT INTO Meal_configs_entries (Id_user_meal_config, Id_kind_meal, Delivery, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, Public_holiday)
         VALUES ?;
       `;
       const values = [];
@@ -462,7 +515,7 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        DELETE FROM Meal_configs
+        DELETE FROM Meal_configs_entries
         WHERE Id_user_meal_config = ? AND Id_kind_meal IN (?);
       `;
       await this.connectionMysql.sql(query, [id, deletedIds], (result) => {
@@ -534,7 +587,7 @@ module.exports = class MealsRequest {
     });
   }
 
-  async deleteGuestConfig(idGuest) {
+  async deleteGuest(idGuest) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -582,6 +635,32 @@ module.exports = class MealsRequest {
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la création des plats de l'invité"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async deleteGuestEntries(idGuest) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        DELETE FROM Guest_entries
+        WHERE Id_guest = ?;
+      `;
+      await this.connectionMysql.sql(query, [idGuest], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression de l'invité"
           };
         }
         if (result.rows) {

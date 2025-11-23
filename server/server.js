@@ -362,7 +362,9 @@ io.on("connection", async (socket) => {
 
   socket.on("add user meal config", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      await mealsRequest.updateUserMealConfigEnd(data.userId, data.lastDate);
+      if (data.previousConfig) {
+        await mealsRequest.updateUserMealConfigEnd(data.previousConfig.id, data.previousConfig.dateEnd);
+      }
       const newUserMealConfigData = await mealsRequest.insertUserMealConfig(data);
 
       if (newUserMealConfigData && newUserMealConfigData.alert) {
@@ -649,6 +651,9 @@ io.on("connection", async (socket) => {
 
   socket.on("edit user meal config", async function (data) {
     if (data && socket.sessionID && socket.company) {
+      if (data.previousConfig) {
+        await mealsRequest.updateUserMealConfigEnd(data.previousConfig.id, data.previousConfig.dateEnd);
+      }
       const updateUserMealConfigData = await mealsRequest.updateUserMealConfig(data);
 
       if (updateUserMealConfigData && updateUserMealConfigData.alert) {
@@ -667,6 +672,20 @@ io.on("connection", async (socket) => {
           }
         }
         emitAllUserMealConfigs(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("edit user meal config end", async function (data) {
+    if (data && data.configId != null && socket.sessionID && socket.company) {
+      const stopConfigData = await mealsRequest.updateUserMealConfigEnd(data.configId, data.date);
+      if (stopConfigData && stopConfigData.alert) {
+        createAlert(socket, stopConfigData.alert.title, stopConfigData.alert.error);
+      }
+      else {
+        emitAllUserMealConfigs(socket.company.id);
+        emitAllUsers(socket.company.id);
       }
     }
     return;
@@ -753,27 +772,6 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("delete user with config", async function (data) {
-    if (data && data.id != null && socket.sessionID && socket.company) {
-      const stopConfigData = await mealsRequest.updateUserMealConfigEnd(data.id, data.date);
-      if (stopConfigData && stopConfigData.alert) {
-        createAlert(socket, stopConfigData.alert.title, stopConfigData.alert.error);
-      }
-      else {
-        emitAllUserMealConfigs(socket.company.id);
-        emitAllUsers(socket.company.id);
-      }
-      // const removeUserData = await mealsRequest.removeUser(socket.company.id, id);
-      // if (removeUserData && removeUserData.alert) {
-      //   createAlert(socket, removeUserData.alert.title, removeUserData.alert.error);
-      // }
-      // else {
-      //   emitAllUsers(socket.company.id);
-      // }
-    }
-    return;
-  });
-
   socket.on("delete user", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
       const deleteUserData = await mealsRequest.deleteUser(socket.company.id, id);
@@ -800,9 +798,13 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("delete user meal config", async function (id) {
-    if (id != null && socket.sessionID && socket.company) {
-      const removeUserMealConfigData = await mealsRequest.removeUserMealConfig(socket.company.id, id);
+  socket.on("delete user meal config", async function (data) {
+    if (data && data.configId != null && socket.sessionID && socket.company) {
+      if (data.previousConfig) {
+        await mealsRequest.updateUserMealConfigEnd(data.previousConfig.id, data.previousConfig.dateEnd);
+      }
+      await mealsRequest.deleteUserMealConfigEntries(data.configId);
+      const removeUserMealConfigData = await mealsRequest.deleteUserMealConfig(data.configId);
       if (removeUserMealConfigData && removeUserMealConfigData.alert) {
         createAlert(socket, removeUserMealConfigData.alert.title, removeUserMealConfigData.alert.error);
       }
@@ -835,6 +837,20 @@ io.on("connection", async (socket) => {
       }
       else {
         emitAllUserMealConfigs(socket.company.id);
+      }
+    }
+    return;
+  });
+
+  socket.on("delete guest", async function (id) {
+    if (id != null && socket.sessionID && socket.company) {
+      await mealsRequest.deleteGuestEntries(id);
+      const removeGuestData = await mealsRequest.deleteGuest(id);
+      if (removeGuestData && removeGuestData.alert) {
+        createAlert(socket, removeGuestData.alert.title, removeGuestData.alert.error);
+      }
+      else {
+        emitAllGuests(socket.company.id);
       }
     }
     return;
@@ -961,6 +977,8 @@ async function emitAllGuests(id) {
   const allGuests = await mealsRequest.getAllGuestsByCompany(id);
   if (allGuests && allGuests.length) {
     io.to(`admin-company:${id}`).emit("guests info", { allGuests });
+  } else {
+    io.to(`admin-company:${id}`).emit("guests info", { allGuests: [] });
   }
 }
 
@@ -968,6 +986,9 @@ async function emitAllUserEvents(id) {
   const allUserEvents = await mealsRequest.getAllUserEventsByCompany(id);
   if (allUserEvents && allUserEvents.length) {
     io.to(`admin-company:${id}`).emit("user events info", { allUserEvents });
+  }
+  else {
+    io.to(`admin-company:${id}`).emit("user events info", { allUserEvents: [] });
   }
 }
 

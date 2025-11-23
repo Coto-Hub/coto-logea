@@ -15,10 +15,6 @@ export default {
         IconRemove,
     },
     props: {
-        day: {
-            type: Object,
-            required: true
-        },
         planningDay: {
             type: Object,
             required: false,
@@ -43,7 +39,7 @@ export default {
 
 <template>
     <div class="day">
-        <span :class="{ 'month': day.isCurrentMonth }">{{ day.day }}</span>
+        <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
         <div class="decoration-container justify-center" v-if="planningDay.startDeco">
             <img :src="getUrl + planningDay.startDeco.icon.path.replace('./', '/')" alt="decoration" loading="lazy" />
         </div>
@@ -63,22 +59,20 @@ export default {
         </div>
         <div class="select">
             <IconEdit v-if="(typeof planningDay.content !== 'string' && planningDay.content !== null)"
-                @click="$emit('editPlanningModal', day.date, $event)" />
+                @click="$emit('editPlanningModal', planningDay.date, $event)" />
             <IconImg v-if="(typeof planningDay.content !== 'string' && planningDay.content !== null)"
-                @click="$emit('editImgPlanningModal', day.date, null, $event)" />
+                @click="$emit('editImgPlanningModal', planningDay.date, null, $event)" />
             <IconPlus v-if="Array.isArray(planningDay.content) || planningDay.content == null"
-                @click="$emit('addAnimationPlanningModal', day.date)" />
-            <IconPaint @click="$emit('customPlanningModal', day.date, $event)"
+                @click="$emit('addAnimationPlanningModal', planningDay.date)" />
+            <IconPaint @click="$emit('customPlanningModal', planningDay.date, $event)"
                 v-if="!Array.isArray(planningDay.content)" />
-            <IconRemove @click="$emit('deleteCustomPlanningModal', day.date)"
+            <IconRemove @click="$emit('deleteCustomPlanningModal', planningDay.date)"
                 v-if="!Array.isArray(planningDay.content) && planningDay.content !== null" />
             <div class="custom">
                 <IconImg v-if="!Array.isArray(planningDay.content) && planningDay.content !== null"
-                    @click="$emit('editImgPlanningModal', day.date, 1, $event)" />
-                <!-- @click="customImgPlanningModal(day.date, 1, $event)" /> -->
+                    @click="$emit('editImgPlanningModal', planningDay.date, 1, $event)" />
                 <IconImg v-if="!Array.isArray(planningDay.content) && planningDay.content !== null"
-                    @click="$emit('editImgPlanningModal', day.date, 2, $event)" />
-                <!-- @click="customImgPlanningModal(day.date, 2, $event)" /> -->
+                    @click="$emit('editImgPlanningModal', planningDay.date, 2, $event)" />
             </div>
         </div>
     </div>

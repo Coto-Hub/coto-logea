@@ -540,7 +540,7 @@ export default {
                                     <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
                                     <div class="decoration-container justify-center"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
-                                        v-if="planningDay.startDeco">
+                                        v-if="planningDay.startDeco && Array.isArray(planningDay.content) && planningDay.content.length < 4">
                                         <img :src="getBase64Img(planningDay.startDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>
@@ -558,7 +558,7 @@ export default {
                                     <div class="decoration-container"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
                                         :class="`${!Array.isArray(planningDay.content) ? 'justify-center' : 'justify-end px-6'}`"
-                                        v-if="planningDay.endDeco">
+                                        v-if="planningDay.endDeco && Array.isArray(planningDay.content) && planningDay.content.length < 4">
                                         <img :src="getBase64Img(planningDay.endDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>

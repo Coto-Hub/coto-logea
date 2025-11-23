@@ -152,17 +152,23 @@ socket.on("user meal configs info", ({ allUserMealConfigs }) => {
 
 socket.on("guests info", ({ allGuests }) => {
     state.guests = allGuests;
-    const guestsList = document.getElementById("update-guests-list");
-    if (guestsList) {
-        guestsList.dispatchEvent(new Event("update"));
+    const guestsList = document.querySelectorAll(".update-guest-list");
+    if (guestsList && guestsList.length > 0) {
+        guestsList.forEach(element => {
+            element.dispatchEvent(new Event("update"));
+        });
+        // guestsList.dispatchEvent(new Event("update"));
     }
 });
 
 socket.on("user events info", ({ allUserEvents }) => {
     state.userEvents = allUserEvents;
-    const userEventsList = document.getElementById("update-user-events-list");
-    if (userEventsList) {
-        userEventsList.dispatchEvent(new Event("update"));
+    const userEventsList = document.querySelectorAll(".update-user-events-list");
+    if (userEventsList && userEventsList.length > 0) {
+        userEventsList.forEach(element => {
+            element.dispatchEvent(new Event("update"));
+        });
+        // userEventsList.dispatchEvent(new Event("update"));
     }
 });
 
