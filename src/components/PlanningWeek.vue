@@ -415,7 +415,7 @@ export default {
                                     @apply float-right max-w-11 max-h-11 mt-1;
                                 }
 
-                                span~span {
+                                .span~span {
                                     ~.icon {
                                         @apply -mt-4;
                                     }

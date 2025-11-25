@@ -533,6 +533,17 @@ main {
               }
             }
           }
+
+          .edit {
+            .edit-icon {
+              @apply fill-blue-200/40 cursor-pointer stroke-2 max-w-8 opacity-50 w-full;
+              @apply stroke-blue-500/70;
+
+              &:hover {
+                @apply stroke-blue-600/90 opacity-100;
+              }
+            }
+          }
         }
 
         ul {
@@ -1719,23 +1730,28 @@ main {
     }
 
     .meals-header {
-      @apply grid border-b-[3px] border-stone-700/40 w-full;
+      @apply grid w-full cursor-default;
       grid-template-columns: 16rem repeat(auto-fit, minmax(100px, 1fr));
       grid-auto-flow: column;
       // grid-template-columns: 2.5fr repeat(4, 2fr) repeat(3, 1.5fr);
+
+      .user-header,
+      .column-header {
+        @apply border-b-[3px] border-stone-700/40;
+      }
 
       .user-header {
         @apply w-64;
       }
 
       .column-header {
-        @apply grid items-center border-l-2 border-black/20 text-black font-medium;
+        @apply grid items-center border-x border-stone-700/40 text-black font-medium;
 
         &.with-tray {
           @apply grid-rows-2;
 
           .kind-meal-label {
-            @apply border-b-2 border-black/20;
+            @apply border-b-2 border-stone-700/40;
           }
         }
 
@@ -1744,7 +1760,7 @@ main {
         }
 
         div p {
-          @apply text-center border-black/20 border-solid content-center;
+          @apply text-center border-stone-700/40 border-solid content-center;
         }
       }
     }
@@ -1758,7 +1774,7 @@ main {
       // background-color: blue;
 
       .meals-case-container {
-        @apply grid items-center border-l-2 border-stone-600/30 h-full;
+        @apply grid items-center border border-stone-600/30 h-full;
 
         &.double-checkbox {
           @apply grid-cols-2;
@@ -1799,7 +1815,8 @@ main {
       }
 
       .user-label {
-        @apply flex items-center px-2 overflow-hidden;
+        @apply flex items-center px-2 overflow-hidden cursor-default;
+        @apply border-y border-r border-stone-600/30;
 
         p {
           @apply truncate text-ellipsis w-full;
@@ -1807,14 +1824,10 @@ main {
       }
 
       &>div {
-        @apply border-y border-stone-600/30;
+        // @apply border-y border-stone-600/30;
 
         &:nth-child(2n) {
           background-color: rgba(251, 111, 146, 0.2);
-        }
-
-        &:hover {
-          @apply bg-white border-black;
         }
 
         &.guest-row {
@@ -1826,15 +1839,15 @@ main {
     }
 
     .meals-footer .total-row {
-      @apply font-semibold border-t-[3px] border-stone-700/40;
+      @apply font-semibold;
 
       .total-kd,
       .total-label {
-        @apply grid items-center border-l-2 border-stone-600/30;
-        @apply text-center;
+        @apply grid items-center border-x border-stone-600/30;
+        @apply text-center border-t-2 border-stone-700/40;
 
         &.total-label {
-          @apply border-none;
+          @apply border-l-0;
         }
 
         p {
@@ -1857,6 +1870,20 @@ main {
           }
         }
       }
+    }
+
+    .total-kd.hover-meal,
+    .column-header.hover-meal,
+    .meals-case-container.hover-meal,
+    .meals-body .user-row:hover,
+    .meals-body .guest-row:hover {
+      @apply bg-neutral-50/70;
+    }
+
+    .meals-footer .total-kd.hover-meal,
+    .column-header.hover-meal,
+    .meals-case-container.hover-meal {
+      @apply border-black/40;
     }
   }
 }

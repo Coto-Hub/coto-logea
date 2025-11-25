@@ -534,33 +534,33 @@ module.exports = class MealsRequest {
     });
   }
 
-  async insertGuestToUser(companyId, userId, label, nbGuests, isStaff) {
+  async insertGuestToUser(companyId, userId, label, info, nbGuests, isStaff) {
     return new Promise(async (resolve) => {
-      const info = {
+      const retrunValue = {
         alert: null,
         value: null,
       };
       const query = `
-        INSERT INTO Guests (Id_company, Id_user, Label, Nb_guests, Is_staff)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO Guests (Id_company, Id_user, Label, Info, Nb_guests, Is_staff)
+        VALUES (?, ?, ?, ?, ?, ?);
       `;
-      await this.connectionMysql.sql(query, [companyId, userId, label, nbGuests, isStaff], (result) => {
+      await this.connectionMysql.sql(query, [companyId, userId, label, info, nbGuests, isStaff], (result) => {
         if (result.error) {
           console.log(result.error);
-          info.alert = {
+          retrunValue.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la création de l'invité"
           };
         }
         if (result.rows) {
-          info.value = result.rows.insertId;
+          retrunValue.value = result.rows.insertId;
         }
-        resolve(info);
+        resolve(retrunValue);
       });
     });
   }
 
-  async updateGuestConfig(idGuest, nbGuests) {
+  async updateGuestConfig(idGuest, guestInfo) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -568,10 +568,10 @@ module.exports = class MealsRequest {
       };
       const query = `
         UPDATE Guests
-        SET Nb_guests = ?
+        SET Info = ?
         WHERE Id = ?;
       `;
-      await this.connectionMysql.sql(query, [nbGuests, idGuest], (result) => {
+      await this.connectionMysql.sql(query, [guestInfo, idGuest], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -645,6 +645,32 @@ module.exports = class MealsRequest {
     });
   }
 
+  async deleteGuestEntriesFromIds(ids) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        DELETE FROM Guest_entries
+        WHERE Id IN (?);
+      `;
+      await this.connectionMysql.sql(query, [ids], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression des plats de l'invité"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
   async deleteGuestEntries(idGuest) {
     return new Promise(async (resolve) => {
       const info = {
@@ -675,7 +701,7 @@ module.exports = class MealsRequest {
     return new Promise(async (resolve) => {
       const guests = [];
       const query = `
-        SELECT g.Id AS 'g_Id', g.Id_user AS 'g_Id_user', g.Label AS 'g_Label', g.Nb_guests AS 'g_Nb_guests', g.Is_staff AS 'g_Is_staff', g.Created AS 'g_Created', ge.Id AS 'ge_Id', ge.Id_kind_meal AS 'ge_Id_kind_meal', ge.Date_start AS 'ge_Date_start', ge.Date_end AS 'ge_Date_end'
+        SELECT g.Id AS 'g_Id', g.Id_user AS 'g_Id_user', g.Label AS 'g_Label', g.Info AS 'g_Info', g.Nb_guests AS 'g_Nb_guests', g.Is_staff AS 'g_Is_staff', g.Created AS 'g_Created', ge.Id AS 'ge_Id', ge.Id_kind_meal AS 'ge_Id_kind_meal', ge.Date_start AS 'ge_Date_start', ge.Date_end AS 'ge_Date_end'
         FROM Guests g
         LEFT JOIN Guest_entries ge ON ge.Id_guest = g.Id
         WHERE g.Id_company = ?;
@@ -687,6 +713,7 @@ module.exports = class MealsRequest {
               guests.push({
                 id: row.g_Id,
                 label: row.g_Label,
+                info: row.g_Info,
                 userId: row.g_Id_user,
                 nbGuests: row.g_Nb_guests,
                 elements: [],

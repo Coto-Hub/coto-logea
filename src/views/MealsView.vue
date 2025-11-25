@@ -341,7 +341,7 @@ export default {
         title: `${isStaff ? 'Personnel : ' : 'Résident : '} ${user.civility} ${user.lastname} `,
         html: `
         <div class="show-user-modal-container modal-container">
-              ${configWithoutEndDate ? `<div class="trash-user-btn" id="trash-user-btn">${this.trashIcon}</div>` : ``}
+              ${configWithoutEndDate || configList.length == 0 ? `<div class="trash-user-btn" id="trash-user-btn">${this.trashIcon}</div>` : ``}
               <div class="edit-user-btn" id="edit-user-btn">${this.editIcon}</div>
               <h2>Configuration des repas</h2>
               <div class="user-config-list-container">
@@ -896,7 +896,7 @@ export default {
       const configList = state.userMealConfigs.filter(c => c.userId == userId).sort((a, b) => moment(a.dateStart).isBefore(b.dateStart));
       const config = configList.length > 0 ? configList[0] : null;
 
-      const mealList = state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (this.isStaffMealView ? kd.isStaff : true)).map((kd) => {
+      const mealList = state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (isStaff ? kd.isStaff : true)).map((kd) => {
         const current = config ? config.elements.find(e => e.idKindMeal == kd.id) : null;
 
         return `<tr data-id="${kd.id}" data-meal="${current ? true : false}" data-delivery="${current && current.delivery ? true : false}" data-config="{'monday':${!current || current.monday},'tuesday':${!current || current.tuesday},'wednesday':${!current || current.wednesday},'thursday':${!current || current.thursday},'friday':${!current || current.friday},'saturday':${!current || current.saturday},'sunday':${!current || current.sunday}}" data-holiday="${current && current.publicHoliday ? true : false}">
@@ -942,7 +942,7 @@ export default {
       }).fire({
         title: `Créer une configuration de repas`,
         html: `
-            <div class="add-user-config-modal-container modal-container">
+            <div id="click-container" class="add-user-config-modal-container modal-container">
               <h2>${user.civility} ${user.lastname} ${user.firstname}</h2>
               <table class="table meal-table">
                 <thead>
@@ -1028,12 +1028,9 @@ export default {
               }
             }
             else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-              document.querySelectorAll('div.btn-select').forEach((li) => {
-                if (li != e.target.closest('div.btn-select')) {
-                  li.classList.remove('active');
-                }
-              });
-              e.target.closest('div.btn-select').classList.toggle('active');
+              if (!e.target.closest('ul.select-list')) {
+                e.target.closest('div.btn-select').classList.toggle('active');
+              }
             }
           });
           document.getElementById('user-config-meal-list').querySelectorAll('.btn-select').forEach((li) => {
@@ -1051,6 +1048,16 @@ export default {
                 li.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
                 break;
             }
+          });
+          document.getElementById('click-container').addEventListener('click', (e) => {
+            console.log(e.target.closest('ul.select-list'));
+            console.log((e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]')) || e.target.closest('ul.select-list'));
+            if ((e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]')) || e.target.closest('ul.select-list')) return;
+            document.querySelectorAll('div.btn-select').forEach((li) => {
+              if (li.classList.contains('active')) {
+                li.classList.remove('active');
+              }
+            });
           });
         },
         preConfirm: () => {
@@ -1128,7 +1135,7 @@ export default {
 
       const previousConfig = configList.length > 0 ? configList.find(c => moment(config.dateStart).add(-1, 'days').isSame(moment(c.dateEnd))) : null;
       const nextConfig = configList.length > 0 ? configList.find(c => moment(config.dateEnd).add(1, 'days').isSame(moment(c.dateStart))) : null;
-      const mealList = state.kindMeals.map((kd) => {
+      const mealList = state.kindMeals.filter(kd => !isStaff || kd.isStaff == isStaff).map((kd) => {
         const current = config.elements.find(e => e.idKindMeal == kd.id);
 
         return `<tr data-id="${kd.id}" data-meal="${current ? true : false}" data-delivery="${current ? (current.delivery ? true : false) : false}" data-config="{'monday':${!current || current.monday},'tuesday':${!current || current.tuesday},'wednesday':${!current || current.wednesday},'thursday':${!current || current.thursday},'friday':${!current || current.friday},'saturday':${!current || current.saturday},'sunday':${!current || current.sunday}}"data-holiday="${current ? current.publicHoliday : false}">
@@ -1291,20 +1298,15 @@ export default {
               }
             }
             else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-              document.querySelectorAll('div.btn-select').forEach((li) => {
-                if (li != e.target.closest('div.btn-select')) {
-                  li.classList.remove('active');
-                }
-              });
-              if (!e.target.closest('div.btn-select').classList.contains('active')) {
+              if (!e.target.closest('ul.select-list')) {
                 e.target.closest('div.btn-select').classList.toggle('active');
               }
             }
           });
           document.getElementById('click-container').addEventListener('click', (e) => {
-            if (e.target.id == 'trash-user-btn' || e.target.closest('#trash-user-btn') || (e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]'))) return;
+            if (e.target.id == 'trash-user-btn' || e.target.closest('#trash-user-btn')) return;
             document.querySelectorAll('div.btn-select').forEach((li) => {
-              if (li.classList.contains('active')) {
+              if (li.classList.contains('active') && e.target.closest('div.btn-select') != li) {
                 li.classList.remove('active');
               }
             });
@@ -1781,7 +1783,6 @@ export default {
       const defaultDaysConfig = listDate.map((date) => {
         return `'${date}': true`;
       }).join(',') ?? '';
-
       const mealList = state.kindMeals.filter(kd => !isStaff || kd.isStaff == isStaff).map((kd) => {
         return `<tr data-id="${kd.id}" data-meal="false" data-delivery="false" data-config="{${defaultDaysConfig}}">
             <td>
@@ -1814,7 +1815,7 @@ export default {
       }).fire({
         title: `Créer une configuration de repas`,
         html: `
-            <div class="add-user-config-modal-container modal-container">
+            <div id="click-container" class="add-user-config-modal-container modal-container">
               <h2>${(userId && user) ? 'Invité de ' + user.civility + ' ' + user.lastname : guestLabel} (${nbGuests})</h2>
               <table class="table meal-table">
                 <thead>
@@ -1828,6 +1829,10 @@ export default {
                   ${mealList}
                 </tbody>
               </table>
+              <div class="input-row">
+                <p>Informations supplémentaires :</p>
+                <input type="text" id="input-guest-info" class="btn-input w-1/3" placeholder="" />
+              </div>
             </div> `,
         confirmButtonText: 'Enregistrer',
         showCancelButton: true,
@@ -1884,12 +1889,9 @@ export default {
               }
             }
             else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-              document.querySelectorAll('div.btn-select').forEach((li) => {
-                if (li != e.target.closest('div.btn-select')) {
-                  li.classList.remove('active');
-                }
-              });
-              e.target.closest('div.btn-select').classList.toggle('active');
+              if (!e.target.closest('ul.select-list')) {
+                e.target.closest('div.btn-select').classList.toggle('active');
+              }
             }
           });
           document.getElementById('user-config-meal-list').querySelectorAll('.btn-select').forEach((li) => {
@@ -1908,10 +1910,24 @@ export default {
                 break;
             }
           });
+          document.getElementById('input-guest-info').addEventListener('input', (e) => {
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
+          document.getElementById('click-container').addEventListener('click', (e) => {
+            if ((e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]')) || e.target.closest('ul.select-list')) return;
+            document.querySelectorAll('div.btn-select').forEach((li) => {
+              if (li.classList.contains('active')) {
+                li.classList.remove('active');
+              }
+            });
+          });
         },
         preConfirm: () => {
           const values = {
             entries: [],
+            guestInfo: document.getElementById('input-guest-info').value,
           };
 
           document.getElementById('user-config-meal-list').querySelectorAll('tr').forEach(
@@ -1968,6 +1984,7 @@ export default {
             userId,
             nbGuests,
             label: guestLabel,
+            info: data.value.guestInfo ?? '',
             isStaff,
             entries: data.value.entries
           });
@@ -1976,6 +1993,251 @@ export default {
           this.addGuestModal(userId, guestLabel, dateStart, dateEnd, nbGuests, isStaff);
         }
         // this.showUserModal(isStaff, userId);
+      });
+    },
+    editGuestConfigModal(guestId, searchValue, filterValue, startDateValue, endDateValue) {
+      const guest = state.guests.find(g => g.id == guestId);
+      if (!guest) return;
+      const dates = {
+        first: guest.elements.find(e => guest.elements.every(el => moment(e.dateStart).isSameOrBefore(el.dateStart))).dateStart,
+        last: guest.elements.find(e => guest.elements.every(el => moment(e.dateEnd).isSameOrAfter(el.dateEnd))).dateEnd,
+      }
+      const listDate = [];
+      for (var m = moment(dates.first); m.diff(dates.last, 'days') <= 0; m.add(1, 'days')) {
+        listDate.push(m.format('DD-MM-YYYY'));
+      }
+      const userGuest = guest.userId != null ? state.users.find(u => u.id == guest.userId) : null;
+      const guestLabel = userGuest ? `Invité de ${userGuest.civility} ${userGuest.lastname}` : guest.label;
+
+      const mealList = state.kindMeals.filter(kd => !userGuest.isStaff || kd.isStaff == userGuest.isStaff).map((kd) => {
+        const current = guest.elements.filter(e => e.idKindMeal == kd.id);
+        const daysConfig = listDate.map((date) => {
+          if (current.find(c => moment(date, 'DD-MM-YYYY').isBetween(moment(c.dateStart), moment(c.dateEnd), 'days', '[]'))) {
+            return `'${date}': true`;
+          }
+          return `'${date}': false`;
+        }).join(',') ?? '';
+        return `<tr data-id="${kd.id}" data-meal="false" data-delivery="false" data-config="{${daysConfig}}">
+            <td>
+              ${kd.label}
+            </td>
+            <td>
+              <div class="custom-checkbox" data-type="meal"></div>
+            </td>
+            <td>
+              <div class="btn-select" data-type="days" data-value="{${daysConfig}}">
+                  <div class="select-label">
+                    <p class="current-choice"></p>
+                  </div>
+                  <ul class="select-list">
+                    <li class="label"><p>${kd.label}</p></li>
+                    ${listDate.map((date) => `<li class="choice" data-choice="${date}"><div class="custom-checkbox"></div>${date}</li>`).join('')}
+                  </ul>
+                </div>
+            </td>
+          </tr> `
+      }).join('');
+      Swal.mixin({
+        width: '50vw',
+        customClass: {
+          confirmButton: "btn btn-confirm",
+          cancelButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Modifier la configuration d'invité`,
+        html: `
+            <div id="click-container" class="add-user-config-modal-container modal-container">
+              <h2>${guestLabel} (${guest.nbGuests})</h2>
+              <table class="table meal-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Repas</th>
+                    <th>Jours actifs</th>
+                  </tr>
+                </thead>
+                <tbody id="user-config-meal-list">
+                  ${mealList}
+                </tbody>
+              </table>
+              <div class="input-row">
+                <p>Informations supplémentaires :</p>
+                <input type="text" id="input-guest-info" class="btn-input w-1/3" value="${guest.info}" placeholder="" />
+              </div>
+            </div> `,
+        confirmButtonText: 'Enregistrer',
+        showCancelButton: true,
+        focusConfirm: false,
+        cancelButtonText: 'Retour',
+        reverseButtons: true,
+        showDenyButton: false,
+        willOpen: () => {
+          document.getElementById('user-config-meal-list').querySelectorAll('tr').forEach((tr) => {
+            const config = JSON.parse(tr.dataset.config.replaceAll("'", '"') ?? '{}');
+
+            if (Object.values(config).some(v => v == true)) {
+              tr.dataset.meal = "true";
+              tr.querySelector('div.custom-checkbox[data-type="meal"]').classList.add('active');
+              tr.querySelectorAll('.choice').forEach((li) => {
+                if (config[li.dataset.choice]) {
+                  li.classList.add('active');
+                }
+              });
+            }
+          });
+          document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
+            if (!(e.target.closest('tr').dataset.meal == "true") && !(e.target.closest('div').dataset.type && e.target.closest('div').dataset.type == "meal")) return;
+            if (e.target.closest('div').classList.contains('custom-checkbox') && e.target.closest('div').dataset.type) {
+              const checkbox = e.target.closest('div');
+
+              const type = checkbox.dataset.type;
+              const tr = e.target.closest('tr');
+              if (checkbox.classList.contains('active')) {
+                checkbox.classList.remove('active');
+                tr.dataset[type] = false;
+              }
+              else {
+                checkbox.classList.add('active');
+                tr.dataset[type] = true;
+              }
+            }
+            else if (e.target.closest('li') && e.target.closest('li').classList.contains('choice')) {
+              const tr = e.target.closest('tr');
+              const li = e.target.closest('.choice');
+              const select = li.closest('.btn-select');
+              const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
+              if (li.classList.contains('active')) {
+                li.classList.remove('active');
+                current[li.dataset.choice] = false;
+                select.dataset.value = JSON.stringify(current);
+                tr.dataset.config = JSON.stringify(current);
+              }
+              else {
+                li.classList.add('active');
+                current[li.dataset.choice] = true;
+                select.dataset.value = JSON.stringify(current);
+                tr.dataset.config = JSON.stringify(current);
+              }
+              const nbElement = Object.values(current).filter(v => v).length;
+              switch (nbElement) {
+                case 0:
+                  tr.querySelector('.current-choice').textContent = 'Aucun jour';
+                  break;
+                case listDate.length:
+                  tr.querySelector('.current-choice').textContent = 'Tous les jours';
+                  break;
+
+                default:
+                  tr.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
+                  break;
+              }
+            }
+            else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
+              if (!e.target.closest('ul.select-list')) {
+                e.target.closest('div.btn-select').classList.toggle('active');
+              }
+            }
+          });
+          document.getElementById('user-config-meal-list').querySelectorAll('.btn-select').forEach((li) => {
+            const current = JSON.parse(li.dataset.value.replaceAll("'", '"') ?? '{}');
+            const nbElement = Object.values(current).filter(v => v).length;
+            switch (nbElement) {
+              case 0:
+                li.querySelector('.current-choice').textContent = 'Aucun jour';
+                break;
+              case listDate.length:
+                li.querySelector('.current-choice').textContent = 'Tous les jours';
+                break;
+
+              default:
+                li.querySelector('.current-choice').textContent = `${nbElement} jour${nbElement > 1 ? 's' : ''} `;
+                break;
+            }
+          });
+          document.getElementById('input-guest-info').addEventListener('input', (e) => {
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
+            }
+          });
+          document.getElementById('click-container').addEventListener('click', (e) => {
+            if (e.target.closest('ul.select-list')) return;
+            document.querySelectorAll('div.btn-select').forEach((li) => {
+              if (li.classList.contains('active') && e.target.closest('div.btn-select') != li) {
+                li.classList.remove('active');
+              }
+            });
+          });
+        },
+        preConfirm: () => {
+          const values = {
+            entries: [],
+            guestInfo: document.getElementById('input-guest-info').value,
+          };
+
+          document.getElementById('user-config-meal-list').querySelectorAll('tr').forEach(
+            (tr) => {
+              if (tr.dataset.id && tr.dataset.meal == "true") {
+                const config = JSON.parse(tr.dataset.config.replaceAll("'", '"') ?? '{}');
+                const trueDates = Object.entries(config)
+                  .filter(([_, v]) => v == true)
+                  .map(([dateStr]) => moment(dateStr, 'DD-MM-YYYY'))
+                  .sort((a, b) => a - b);
+
+                let start = null;
+                let end = null;
+
+                for (let i = 0; i < trueDates.length; i++) {
+                  const current = trueDates[i];
+
+                  if (!start) {
+                    start = end = current;
+                  } else {
+                    if (current.diff(end, 'days') === 1) {
+                      end = current;
+                    } else {
+                      values.entries.push({
+                        idKindMeal: tr.dataset.id,
+                        delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
+                        dateStart: start.format('YYYY-MM-DD'),
+                        dateEnd: end.format('YYYY-MM-DD'),
+                      });
+                      start = end = current;
+                    }
+                  }
+                }
+
+                if (start) {
+                  values.entries.push({
+                    idKindMeal: tr.dataset.id,
+                    delivery: (tr.dataset.delivery == "true" || tr.dataset.delivery == 1),
+                    dateStart: start.format('YYYY-MM-DD'),
+                    dateEnd: end.format('YYYY-MM-DD'),
+                  });
+                }
+              }
+            }
+          );
+          if (!values.entries.length) {
+            Swal.showValidationMessage(`Vous devez sélectionner au moins un repas.`);
+          }
+          values.adedEntries = values.entries.filter(c => !guest.elements.find(e => e.idKindMeal == c.idKindMeal && moment(e.dateStart).isSame(c.dateStart, 'days') && moment(e.dateEnd).isSame(c.dateEnd, 'days')));
+          values.deletedEntries = guest.elements.filter(e => !values.entries.find(c => c.idKindMeal == e.idKindMeal && moment(e.dateStart).isSame(c.dateStart, 'days') && moment(e.dateEnd).isSame(c.dateEnd, 'days'))).map(e => e.id);
+
+          if (values.adedEntries.length == 0 && values.deletedEntries.length == 0 && values.guestInfo == guest.info) {
+            Swal.showValidationMessage(`Aucune modification n'a été effectuée.`);
+          }
+
+          return values;
+        },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          data.value.guestId = guestId;
+
+          socket.emit('edit guest config', data.value);
+        }
+        this.showHistoryModal(searchValue, filterValue, startDateValue, endDateValue);
       });
     },
     addEventModal(userId, dateStart, dateEnd) {
@@ -2262,7 +2524,7 @@ export default {
       }).fire({
         title: `Modifier les repas de la sélection`,
         html: `
-            <div class="add-user-config-modal-container modal-container">
+            <div id="click-container" class="add-user-config-modal-container modal-container">
               <h2>${user.civility} ${user.lastname} ${user.firstname}</h2>
               <table class="table meal-table">
                 <thead>
@@ -2374,11 +2636,6 @@ export default {
                 }
               }
               else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-                document.querySelectorAll('div.btn-select').forEach((li) => {
-                  if (li != e.target.closest('div.btn-select')) {
-                    li.classList.remove('active');
-                  }
-                });
                 if ((e.target.closest('div.btn-select').dataset.type != "delivery") || (e.target.closest('tr').querySelector('div[data-type="meal"]') && (e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.nb != "0"))) {
                   if (e.target.closest('div.btn-select').dataset.type == "delivery") {
                     const mealSelect = JSON.parse(e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
@@ -2391,7 +2648,9 @@ export default {
                       }
                     });
                   }
-                  e.target.closest('div.btn-select').classList.toggle('active');
+                  if (!e.target.closest('ul.select-list')) {
+                    e.target.closest('div.btn-select').classList.toggle('active');
+                  }
                 }
               }
               if (deliverySelect) {
@@ -2428,6 +2687,14 @@ export default {
                 }
                 mealSelect.dataset.nb = nbElement;
               }
+            });
+            document.getElementById('click-container').addEventListener('click', (e) => {
+              if (e.target.closest('ul.select-list')) return;
+              document.querySelectorAll('div.btn-select').forEach((li) => {
+                if (li.classList.contains('active') && e.target.closest('div.btn-select') != li) {
+                  li.classList.remove('active');
+                }
+              });
             });
           }
 
@@ -2648,8 +2915,8 @@ export default {
         return {
           created: event.created,
           html: `
-          <li data-id="${event.id}" data-type="event" data-dates="${listDate}" title="${moment(event.created).format("DD-MM-YYYY | HH:mm:ss")}">
-            <p>
+          <li data-id="${event.id}" data-type="event" data-dates="${listDate}">
+            <p title="${moment(event.created).format("DD-MM-YYYY | HH:mm:ss")}">
               <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
@@ -2686,14 +2953,14 @@ export default {
         return {
           created: guest.created,
           html: `
-          <li data-id="${guest.id}" data-type="guest" data-dates="${listDate}" title="${moment(guest.created).format("DD-MM-YYYY | HH:mm:ss")}">
-            <p>
+          <li data-id="${guest.id}" data-type="guest" data-dates="${listDate}">
+            <p title="${moment(guest.created).format("DD-MM-YYYY | HH:mm:ss")}">
               <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
               <strong class="pr-1">${guest.nbGuests}</strong> ${guest.nbGuests > 1 ? `Invités` : `Invité`} - <span class="px-1 filter">${guestLabel}</span> [${guest.elements.length}]
               <span class="absolute right-14 italic">${moment(guest.created).calendar()}</span>
-              <span class="absolute right-4 icon trash" title="Supprimer">${this.trashIcon}</span>
+              <span class="absolute right-4 icon edit" title="Modifier">${this.editIcon}</span>
             </p>
             <ul>
               ${guest.elements.map(e => `
@@ -2816,23 +3083,21 @@ export default {
             }
           });
           document.getElementById('update-user-guest-events-list').addEventListener('click', (e) => {
-            if (e.target.closest('span') && e.target.closest('span').classList.contains('trash')) {
+            if (e.target.closest('span.trash') || e.target.closest('span.edit')) {
               const searchValue = document.getElementById('input-search-list').value.toLowerCase();
               const filterValue = document.getElementById('history-switch').dataset.value;
               const startDateValue = document.getElementById('input-search-date-start').value;
               const endDateValue = document.getElementById('input-search-date-end').value;
               const type = e.target.closest('li[data-id]').dataset.type;
               const eventId = e.target.closest('li[data-id]').dataset.id;
-              if (type == 'guest') {
-                const event = state.guests.find(ev => ev.id == eventId);
-                Swal.close();
-                this.deleteGuestModal(event, searchValue, filterValue, startDateValue, endDateValue);
-                return;
-              }
-              else if (type == 'event') {
+              if (e.target.closest('span').classList.contains('trash') && type == 'event') {
                 const event = state.userEvents.find(ev => ev.id == eventId);
                 Swal.close();
                 this.deleteEventModal(event, searchValue, filterValue, startDateValue, endDateValue);
+              }
+              else if (e.target.closest('span').classList.contains('edit') && type == 'guest') {
+                Swal.close();
+                this.editGuestConfigModal(eventId, searchValue, filterValue, startDateValue, endDateValue);
               }
               return;
             }
@@ -2864,8 +3129,8 @@ export default {
               return {
                 created: event.created,
                 html: `
-          <li data-id="${event.id}" data-type="event" data-dates="${listDate}" title="${moment(event.created).format("DD-MM-YYYY | HH:mm:ss")}">
-            <p>
+          <li data-id="${event.id}" data-type="event" data-dates="${listDate}">
+            <p title="${moment(event.created).format("DD-MM-YYYY | HH:mm:ss")}">
               <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
@@ -2902,14 +3167,14 @@ export default {
               return {
                 created: guest.created,
                 html: `
-          <li data-id="${guest.id}" data-type="guest" data-dates="${listDate}" title="${moment(guest.created).format("DD-MM-YYYY | HH:mm:ss")}">
-            <p>
+          <li data-id="${guest.id}" data-type="guest" data-dates="${listDate}">
+            <p title="${moment(guest.created).format("DD-MM-YYYY | HH:mm:ss")}">
               <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
               <strong class="pr-1">${guest.nbGuests}</strong> ${guest.nbGuests > 1 ? `Invités` : `Invité`} - <span class="px-1 filter">${guestLabel}</span> [${guest.elements.length}]
               <span class="absolute right-14 italic">${moment(guest.created).calendar()}</span>
-              <span class="absolute right-4 icon trash" title="Supprimer">${this.trashIcon}</span>
+              <span class="absolute right-4 icon edit" title="Modifier">${this.editIcon}</span>
             </p>
             <ul>
               ${guest.elements.map(e => `
@@ -3135,6 +3400,7 @@ export default {
             id: g.id,
             nbGuests: g.nbGuests,
             label: g.label,
+            info: g.info,
             values: gValues,
             dateStart: dateStart,
             dateEnd: dateEnd

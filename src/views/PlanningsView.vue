@@ -417,6 +417,7 @@ export default {
     },
     editAnimationModal(id) {
       const animation = state.animations.find(a => a.id == id);
+      const listIcons = state.icons.filter(i => i.animationId == id);
       Swal.mixin({
         customClass: {
           confirmButton: "btn btn-confirm",
@@ -437,7 +438,7 @@ export default {
                   </svg>
                 </label>
                 <input type="file" id="import-icon" style="display: none" ref="fileInput" accept="image/*"/>
-                ${animation.icons.map(icon => `
+                ${listIcons.map(icon => `
                   <div class="icon-container can-delete" data-id="${icon.id}">
                     <img src="${state.url}${icon.path.replace('./', '/')}" alt="${icon.label}" loading="lazy"/>
                     <p>${icon.label}</p>
@@ -1249,6 +1250,14 @@ export default {
           document.getElementById('planning-minute-input').addEventListener('keydown', (e) => {
             if (e.key == "Backspace" && e.target.value.length == 0) {
               document.getElementById('planning-hour-input').focus();
+            }
+          });
+          document.getElementById('planning-content-input').addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
             }
           });
         },

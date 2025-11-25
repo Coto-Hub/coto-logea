@@ -27,6 +27,7 @@ export default {
     data() {
         return {
             userSearch: '',
+            dataHoverMealId: null,
         }
     },
     mounted() {
@@ -123,13 +124,14 @@ export default {
 </script>
 
 <template>
-    <section class="general-input">
+    <section class="general-input" @mouseout="dataHoverMealId = null">
         <div class="meals-header">
             <div class="user-header">
                 <input type="text" v-model="userSearch" placeholder="Rechercher par nom..." />
             </div>
-            <div class="column-header" :class="{ 'with-tray': kd.canDelivery && !isStaffMealView }"
-                v-for="kd in kindMeals" :key="kd.id">
+            <div class="column-header"
+                :class="{ 'with-tray': kd.canDelivery && !isStaffMealView, 'hover-meal': dataHoverMealId === kd.id }"
+                v-for="kd in kindMeals" :key="kd.id" :data-meal-id="kd.id" @mouseover="dataHoverMealId = kd.id">
                 <p class="kind-meal-label">{{ kd.label }}</p>
                 <div class="flex h-full" v-if="kd.canDelivery && !isStaffMealView">
                     <p :class="kd.canDelivery ? 'w-1/2 border-r' : 'w-full'">Repas</p>
@@ -141,13 +143,14 @@ export default {
             <div class="meals-body">
                 <template v-for="user in getFilteredUsers" :key="user.id">
                     <div class="user-row">
-                        <div class="user-label">
+                        <div class="user-label" @mouseover="dataHoverMealId = null">
                             <p v-if="user.id != null">{{ user.civility }} {{ user.lastname }} {{ user.firstname }}</p>
                             <p v-else><strong>Invités suplémentaires</strong></p>
                         </div>
                         <div class="meals-case-container"
-                            :class="kd.canDelivery && !isStaffMealView ? 'double-checkbox' : ''"
-                            v-for="kd in user.values" :key="kd.id">
+                            :class="{ 'double-checkbox': kd.canDelivery && !isStaffMealView, 'hover-meal': dataHoverMealId === kd.id }"
+                            v-for="kd in user.values" :key="kd.id" :data-meal-id="kd.id"
+                            @mouseover="dataHoverMealId = kd.id">
                             <div class="custom-checkbox" :class="kd.meal ? 'active' : ''"
                                 @click="userNewEvent(user.id, kd, false)"></div>
                             <div v-if="kd.canDelivery && !isStaffMealView" class="custom-checkbox"
@@ -157,16 +160,15 @@ export default {
                     <div class="guest-row" v-for="guest in user.guests" :key="guest.id">
                         <div class="user-label" :title="`Invité(s) du ${guest.dateStart} au ${guest.dateEnd}`">
                             <p v-if="user.id != null">+ {{ guest.nbGuests }} Invité{{ guest.nbGuests > 1 ? 's' : '' }}
+                                {{ guest.info ? `/ ${guest.info}` : '' }}
                             </p>
-                            <p v-else>{{ guest.label }} ({{ guest.nbGuests }})</p>
+                            <p v-else>{{ guest.label }} ({{ guest.nbGuests }}) {{ guest.info ? `/ ${guest.info}` : '' }}
+                            </p>
                         </div>
-                        <div v-for="kd in guest.values" :key="kd.id">
-                            <div class="meals-case-container"
-                                :class="kd.canDelivery && !isStaffMealView ? 'double-checkbox' : ''">
-                                <div class="custom-checkbox" :class="kd.meal ? 'active' : ''"
-                                    @click="userNewEventGuest">
-                                </div>
-                            </div>
+                        <div class="meals-case-container" v-for="kd in guest.values" :key="kd.id" :data-meal-id="kd.id"
+                            :class="{ 'double-checkbox': kd.canDelivery && !isStaffMealView, 'hover-meal': dataHoverMealId === kd.id }"
+                            @mouseover="dataHoverMealId = kd.id">
+                            <div class="custom-checkbox" :class="kd.meal ? 'active' : ''"></div>
                         </div>
                     </div>
                 </template>
@@ -177,8 +179,9 @@ export default {
                 <div class="total-label">
                     <p>Total</p>
                 </div>
-                <div class="total-kd" v-for="kd in getTotal" :key="kd.id"
-                    :class="kd.canDelivery && !isStaffMealView ? 'double' : ''">
+                <div class="total-kd" v-for="kd in getTotal" :key="kd.id" :data-meal-id="kd.id"
+                    :class="{ 'double': kd.canDelivery && !isStaffMealView, 'hover-meal': dataHoverMealId === kd.id }"
+                    @mouseover="dataHoverMealId = kd.id">
                     <p>{{ kd.meal }}</p>
                     <p v-if="kd.canDelivery && !isStaffMealView">{{ kd.delivery }}</p>
                 </div>

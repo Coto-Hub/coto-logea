@@ -399,7 +399,7 @@ io.on("connection", async (socket) => {
 
   socket.on("add guest", async function (data) {
     if (data && socket.sessionID && socket.company) {
-      const newGuest = await mealsRequest.insertGuestToUser(socket.company.id, data.userId, data.label, data.nbGuests, data.isStaff);
+      const newGuest = await mealsRequest.insertGuestToUser(socket.company.id, data.userId, data.label, data.info, data.nbGuests, data.isStaff);
 
       if (newGuest && newGuest.alert) {
         createAlert(socket, newGuest.alert.title, newGuest.alert.error);
@@ -700,6 +700,26 @@ io.on("connection", async (socket) => {
       }
 
       emitAllUserMealConfigs(socket.company.id);
+    }
+    return;
+  });
+
+  socket.on("edit guest config", async function (data) {
+    if (data && socket.sessionID && socket.company) {
+      const updateUserMealConfigData = await mealsRequest.updateGuestConfig(data.guestId, data.guestInfo);
+
+      if (updateUserMealConfigData && updateUserMealConfigData.alert) {
+        createAlert(socket, updateUserMealConfigData.alert.title, updateUserMealConfigData.alert.error);
+      }
+      else {
+        if (data.adedEntries && data.adedEntries.length) {
+          await mealsRequest.insertGuestEntries(data.guestId, data.adedEntries);
+        }
+        if (data.deletedEntries && data.deletedEntries.length) {
+          await mealsRequest.deleteGuestEntriesFromIds(data.deletedEntries);
+        }
+        emitAllGuests(socket.company.id);
+      }
     }
     return;
   });

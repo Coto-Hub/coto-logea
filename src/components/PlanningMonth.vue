@@ -227,7 +227,8 @@ export default {
             this.config = false;
         },
         changeIcon(side) {
-            const defaultIcons = state.animations.find(a => a.label == "").icons;
+            const animation = state.animations.find(a => a.label == "");
+            const defaultIcons = animation ? state.icons.filter(i => i.animationId == animation.id) : [];
             const currentIcon = defaultIcons.find(i => i.id == (side == 'left' ? this.iconLeft.id : this.iconRight.id));
             Swal.mixin({
                 customClass: {
@@ -540,7 +541,7 @@ export default {
                                     <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
                                     <div class="decoration-container justify-center"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
-                                        v-if="planningDay.startDeco && Array.isArray(planningDay.content) && planningDay.content.length < 4">
+                                        v-if="planningDay.startDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 4) || !Array.isArray(planningDay.content))">
                                         <img :src="getBase64Img(planningDay.startDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>
@@ -558,7 +559,7 @@ export default {
                                     <div class="decoration-container"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
                                         :class="`${!Array.isArray(planningDay.content) ? 'justify-center' : 'justify-end px-6'}`"
-                                        v-if="planningDay.endDeco && Array.isArray(planningDay.content) && planningDay.content.length < 4">
+                                        v-if="planningDay.endDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 4) || !Array.isArray(planningDay.content))">
                                         <img :src="getBase64Img(planningDay.endDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>
