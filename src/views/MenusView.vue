@@ -63,7 +63,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
         </button>
-        <input type="date" name="form-date" class="form-date" v-model="stringDate" @change="updateDate">
+        <input type="date" onfocus="this.showPicker()" name="form-date" class="form-date" v-model="stringDate"
+          @change="updateDate">
         <button class="date-btn" @click="changeDate(+1)">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
             stroke="currentColor" class="size-6">
@@ -216,7 +217,7 @@ export default {
               <input type="file" id="import-file" style="display: none" ref="fileInput" accept=".xlsx"/>
               <label>
                 Date de début:
-                <input type="date" name="start-file-date" id="start-file-date" class="start-file-date">
+                <input type="date" onfocus="this.showPicker()" name="start-file-date" id="start-file-date" class="start-file-date">
               </label>
             </div>
             `,

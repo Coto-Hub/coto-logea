@@ -1,10 +1,10 @@
 <script>
 import { state } from "@/socket";
-import LoginView from "./LoginView.vue"
+import LoginComponent from "@/components/Login.vue";
 
 export default {
   components: {
-    LoginView,
+    LoginComponent,
   },
   props: {
   },
@@ -24,7 +24,7 @@ export default {
 
 <template>
   <main>
-    <LoginView v-if="!isConnected" />
+    <LoginComponent v-if="!isConnected" />
   </main>
 </template>
 

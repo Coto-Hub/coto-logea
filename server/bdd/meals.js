@@ -9,7 +9,7 @@ module.exports = class MealsRequest {
     return new Promise(async (resolve) => {
       const KindMeals = [];
       const query = `
-        SELECT k.Id AS 'k_Id', k.Label AS 'k_Label', k.Can_delivery AS 'k_Can_delivery', k.Is_staff AS 'k_Is_staff', k.Number AS 'k_Number', k.End_date AS 'k_End_date'
+        SELECT k.Id AS 'k_Id', k.Label AS 'k_Label', k.Abbreviation AS 'k_Abbreviation', k.Id_delivery AS 'k_Id_delivery', k.Can_guest AS 'k_Can_guest', k.Is_staff AS 'k_Is_staff', k.Number AS 'k_Number', k.End_date AS 'k_End_date'
         FROM Kind_meals k WHERE k.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -18,7 +18,9 @@ module.exports = class MealsRequest {
             KindMeals.push({
               id: row.k_Id,
               label: row.k_Label,
-              canDelivery: row.k_Can_delivery,
+              abbreviation: row.k_Abbreviation,
+              deliveryId: row.k_Id_delivery,
+              canGuest: row.k_Can_guest,
               isStaff: row.k_Is_staff,
               order: row.k_Number,
               endDate: row.k_End_date,
@@ -37,10 +39,10 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Kind_meals (Id_company, Label, Can_delivery, Is_staff, Number)
-        VALUES (?, ?, ?, ?, ?);
+        INSERT INTO Kind_meals (Id_company, Label, Abbreviation, Id_delivery, Can_guest, Is_staff, Number)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
       `;
-      await this.connectionMysql.sql(query, [companyId, kindMeal.label, kindMeal.canDelivery, kindMeal.isStaff, kindMeal.order], (result) => {
+      await this.connectionMysql.sql(query, [companyId, kindMeal.label, kindMeal.abbreviation, kindMeal.deliveryId, kindMeal.canGuest, kindMeal.isStaff, kindMeal.order], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -64,10 +66,10 @@ module.exports = class MealsRequest {
       };
       const query = `
         UPDATE Kind_meals
-        SET Label = ?, Can_delivery = ?, Is_staff = ?
+        SET Label = ?, Abbreviation = ?, Id_delivery = ?, Can_guest = ?, Is_staff = ?
         WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [kindMeal.label, kindMeal.canDelivery, kindMeal.isStaff, kindMeal.id, companyId], (result) => {
+      await this.connectionMysql.sql(query, [kindMeal.label, kindMeal.abbreviation, kindMeal.deliveryId, kindMeal.canGuest, kindMeal.isStaff, kindMeal.id, companyId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {

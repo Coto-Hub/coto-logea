@@ -4,7 +4,16 @@ import moment from 'moment';
 import { socket, state } from "@/socket";
 import IconSetting from "@/components/icons/IconSetting.vue";
 import Meals from "@/components/Meals.vue";
+import util from '@/util';
 
+document.addEventListener('click', (e) => {
+  const target = e ? e.target : null;
+  if (target && target.tagName == 'INPUT' && target.type == "date") {
+    e.stopPropagation();
+    e.preventDefault();
+    target.showPicker();
+  }
+});
 export default {
   name: "app-meal",
   components: {
@@ -29,7 +38,6 @@ export default {
       stringDate: '',
       isStaffMealView: false,
       filterUserByConfig: false,
-      joursFeries: {},
     }
   },
   emits: [],
@@ -322,7 +330,7 @@ export default {
     showUserModal(isStaff, id) {
       const user = state.users.find(u => u.id == id && u.isStaff == isStaff);
       if (!user) return;
-      const configList = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart) - moment(a.dateStart)).map((c) => {
+      const configList = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart).diff(a.dateStart)).map((c) => {
         return `
         <li class="list-item" data-id="${c.id}">
           <p>${c.dateEnd ? 'Du ' + moment(c.dateStart).format('DD/MM/YYYY') + ' au ' + moment(c.dateEnd).format('DD/MM/YYYY') : 'Depuis le ' + moment(c.dateStart).format('DD/MM/YYYY')}
@@ -384,7 +392,7 @@ export default {
             }
           });
           document.getElementById("update-user-meal-configs").addEventListener('update', () => {
-            document.getElementById("update-user-meal-configs").innerHTML = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart) - moment(a.dateStart)).map((c) => {
+            document.getElementById("update-user-meal-configs").innerHTML = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart).diff(a.dateStart)).map((c) => {
               return `
         <li class="list-item" data-id="${c.id}">
           <p>${c.dateEnd ? 'Du ' + moment(c.dateStart).format('DD/MM/YYYY') + ' au ' + moment(c.dateEnd).format('DD/MM/YYYY') : 'Depuis le ' + moment(c.dateStart).format('DD/MM/YYYY')}
@@ -625,7 +633,7 @@ export default {
       let lastConfig = false;
       const configList = state.userMealConfigs.filter(c => c.userId == user.id);
       if (configList && configList.length > 0) {
-        lastConfig = configList.find(c => c.dateEnd == null) || configList.sort((a, b) => moment(b.dateStart) - moment(a.dateStart))[0];
+        lastConfig = configList.find(c => c.dateEnd == null) || configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0];
       }
       if (!lastConfig) {
         data.html = `
@@ -685,7 +693,7 @@ export default {
             socket.emit('delete user', user.id);
           }
           else {
-            data.value.configId = configList.sort((a, b) => moment(b.dateStart) - moment(a.dateStart))[0].id;
+            data.value.configId = configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0].id;
             socket.emit('edit user meal config end', data.value);
           }
         }
@@ -705,14 +713,26 @@ export default {
         html: `
         <div class="add-meal-modal-container modal-container">
               <input type="text" id="meal-label" class="btn-input btn-search" placeholder="Nom du repas" />
-              <label for="meal-active" class="btn-checkbox">
-                <input type="checkbox" id="meal-active" class="hidden" />
+              <input type="text" id="meal-abbreviation" class="btn-input btn-search" value="" placeholder="Abréviation" />
+              <div class="triple-select-input">
+                <input type="text" class="btn-input" id="select-deliveries" data-id="0" value="Aucun plateau" readonly />
+                <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+                <ul class="triple-select-list" id="list-deliveries">
+                  <li class="choice" data-id="0">Aucun plateau</li>
+                  <li class="choice" data-id="1">Plateau du Midi</li>
+                  <li class="choice" data-id="2">Plateau du Soir</li>
+                </ul>
+              </div>
+              <label for="guest-active" class="btn-checkbox">
+                <input type="checkbox" id="guest-active" class="hidden" />
                 <span class="checkmark">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
                   </svg>
                 </span>
-                <span class="label">Possibilité de plateau</span>
+                <span class="label">Repas d'invité</span>
               </label>
               <label for="staff-active" class="btn-checkbox">
                 <input type="checkbox" id="staff-active" class="hidden" />
@@ -732,7 +752,7 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
         willOpen: () => {
-          document.getElementById("meal-active").addEventListener('click', (e) => {
+          document.getElementById("guest-active").addEventListener('click', (e) => {
             e.target.closest('label').classList.toggle('active');
           });
           document.getElementById("staff-active").addEventListener('click', (e) => {
@@ -746,11 +766,49 @@ export default {
               e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
             }
           });
+          document.getElementById("meal-abbreviation").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value.toUpperCase().replaceAll('  ', ' ');
+            }
+          });
+          document.getElementById("list-deliveries").addEventListener('click', (e) => {
+            const choice = e.target.closest(".choice");
+            if (choice) {
+              const select = document.getElementById("select-deliveries");
+              select.dataset.id = choice.dataset.id;
+              select.value = choice.textContent;
+            }
+            document.getElementById("list-deliveries").querySelectorAll('.choice').forEach((li) => {
+              li.style.display = 'flex';
+            });
+          });
+          document.getElementById("select-deliveries").addEventListener('focus', (e) => {
+            const dataId = e.target.dataset.id;
+            document.getElementById("list-deliveries").querySelectorAll('.choice').forEach((li) => {
+              li.style.display = li.dataset && li.dataset.id == dataId ? 'none' : 'flex';
+            });
+          });
+          document.getElementById("select-deliveries").addEventListener('click', (e) => {
+            if (e.target.classList.contains('active')) {
+              e.target.blur();
+            }
+            else {
+              e.target.classList.add('active');
+            }
+          });
+          document.getElementById("select-deliveries").addEventListener('blur', (e) => {
+            e.target.classList.remove('active');
+          });
         },
         preConfirm: () => {
           const values = {
             label: document.getElementById("meal-label").value,
-            canDelivery: document.getElementById("meal-active").checked,
+            abbreviation: document.getElementById("meal-abbreviation").value,
+            canGuest: document.getElementById("guest-active").checked,
+            deliveryId: document.getElementById("select-deliveries").dataset.id,
             isStaff: document.getElementById("staff-active").checked,
           };
 
@@ -783,14 +841,26 @@ export default {
         html: `
             <div class="add-meal-modal-container modal-container">
               <input type="text" id="meal-label" class="btn-input btn-search" value="${kindMeal.label}" placeholder="Nom du repas" />
-              <label for="meal-active" class="btn-checkbox ${kindMeal.canDelivery ? 'active' : ''}">
-                <input type="checkbox" id="meal-active" ${kindMeal.canDelivery ? 'checked' : ''} class="hidden" />
+              <input type="text" id="meal-abbreviation" class="btn-input btn-search" value="${kindMeal.abbreviation ? kindMeal.abbreviation : ''}" placeholder="Abréviation" />
+              <div class="triple-select-input">
+                <input type="text" class="btn-input" id="select-deliveries" data-id="${kindMeal.deliveryId}" value="Aucun plateau" readonly />
+                <svg class="arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+                <ul class="triple-select-list" id="list-deliveries">
+                  <li class="choice" data-id="0">Aucun plateau</li>
+                  <li class="choice" data-id="1">Plateau du Midi</li>
+                  <li class="choice" data-id="2">Plateau du Soir</li>
+                </ul>
+              </div>
+              <label for="guest-active" class="btn-checkbox ${kindMeal.canGuest ? 'active' : ''}">
+                <input type="checkbox"  ${kindMeal.canGuest ? 'checked' : ''} id="guest-active" class="hidden" />
                 <span class="checkmark">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
                   </svg>
                 </span>
-                <span class="label">Possibilité de plateau</span>
+                <span class="label">Repas d'invité</span>
               </label>
               <label for="staff-active" class="btn-checkbox ${kindMeal.isStaff ? 'active' : ''}">
                 <input type="checkbox"  ${kindMeal.isStaff ? 'checked' : ''} id="staff-active" class="hidden" />
@@ -810,7 +880,12 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
         willOpen: () => {
-          document.getElementById("meal-active").addEventListener('click', (e) => {
+          document.getElementById('list-deliveries').querySelectorAll('.choice').forEach((li) => {
+            if (li.dataset.id == kindMeal.deliveryId) {
+              document.getElementById("select-deliveries").value = li.textContent;
+            }
+          });
+          document.getElementById("guest-active").addEventListener('click', (e) => {
             e.target.closest('label').classList.toggle('active');
           });
           document.getElementById("staff-active").addEventListener('click', (e) => {
@@ -824,11 +899,49 @@ export default {
               e.target.value = e.target.value[0].toUpperCase() + e.target.value.replaceAll('  ', ' ').slice(1);
             }
           });
+          document.getElementById("list-deliveries").addEventListener('click', (e) => {
+            const choice = e.target.closest(".choice");
+            if (choice) {
+              const select = document.getElementById("select-deliveries");
+              select.dataset.id = choice.dataset.id;
+              select.value = choice.textContent;
+            }
+            document.getElementById("list-deliveries").querySelectorAll('.choice').forEach((li) => {
+              li.style.display = 'flex';
+            });
+          });
+          document.getElementById("select-deliveries").addEventListener('focus', (e) => {
+            const dataId = e.target.dataset.id;
+            document.getElementById("list-deliveries").querySelectorAll('.choice').forEach((li) => {
+              li.style.display = li.dataset && li.dataset.id == dataId ? 'none' : 'flex';
+            });
+          });
+          document.getElementById("select-deliveries").addEventListener('click', (e) => {
+            if (e.target.classList.contains('active')) {
+              e.target.blur();
+            }
+            else {
+              e.target.classList.add('active');
+            }
+          });
+          document.getElementById("select-deliveries").addEventListener('blur', (e) => {
+            e.target.classList.remove('active');
+          });
+          document.getElementById("meal-abbreviation").addEventListener('input', (e) => {
+            if (e.target.value == " ") {
+              e.target.value = "";
+            }
+            if (e.target.value.length > 0) {
+              e.target.value = e.target.value.toUpperCase().replaceAll('  ', ' ');
+            }
+          });
         },
         preConfirm: () => {
           const values = {
             label: document.getElementById("meal-label").value,
-            canDelivery: document.getElementById("meal-active").checked,
+            abbreviation: document.getElementById("meal-abbreviation").value,
+            canGuest: document.getElementById("guest-active").checked,
+            deliveryId: document.getElementById("select-deliveries").dataset.id,
             isStaff: document.getElementById("staff-active").checked
           };
 
@@ -893,10 +1006,10 @@ export default {
     },
     addUserConfigModal(isStaff, userId) {
       const user = state.users.find(u => u.id == userId && u.isStaff == isStaff);
-      const configList = state.userMealConfigs.filter(c => c.userId == userId).sort((a, b) => moment(a.dateStart).isBefore(b.dateStart));
+      const configList = state.userMealConfigs.filter(c => c.userId == userId).sort((a, b) => moment(b.dateStart).diff(a.dateStart));
       const config = configList.length > 0 ? configList[0] : null;
 
-      const mealList = state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (isStaff ? kd.isStaff : true)).map((kd) => {
+      const mealList = state.kindMeals.filter(kd => kd.isStaff == isStaff || !isStaff).filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (isStaff ? kd.isStaff : true)).map((kd) => {
         const current = config ? config.elements.find(e => e.idKindMeal == kd.id) : null;
 
         return `<tr data-id="${kd.id}" data-meal="${current ? true : false}" data-delivery="${current && current.delivery ? true : false}" data-config="{'monday':${!current || current.monday},'tuesday':${!current || current.tuesday},'wednesday':${!current || current.wednesday},'thursday':${!current || current.thursday},'friday':${!current || current.friday},'saturday':${!current || current.saturday},'sunday':${!current || current.sunday}}" data-holiday="${current && current.publicHoliday ? true : false}">
@@ -907,7 +1020,7 @@ export default {
               <div class="custom-checkbox ${current ? 'active' : ''}" data-type="meal"></div>
             </td>
             <td>
-              <div class="custom-checkbox ${!kd.canDelivery ? 'disabled' : ''}" data-type="delivery"></div>
+              <div class="custom-checkbox ${!kd.deliveryId ? 'disabled' : ''}" data-type="delivery"></div>
             </td>
             <td>
               <div class="custom-checkbox ${(current && current.publicHoliday) ? 'active' : ''}" data-type="holiday"></div>
@@ -1050,8 +1163,6 @@ export default {
             }
           });
           document.getElementById('click-container').addEventListener('click', (e) => {
-            console.log(e.target.closest('ul.select-list'));
-            console.log((e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]')) || e.target.closest('ul.select-list'));
             if ((e.target.closest('div.btn-select') && !e.target.closest('tr[data-meal="false"]')) || e.target.closest('ul.select-list')) return;
             document.querySelectorAll('div.btn-select').forEach((li) => {
               if (li.classList.contains('active')) {
@@ -1131,7 +1242,7 @@ export default {
 
       const configList = state.userMealConfigs
         .filter(c => c.userId == userId && c.id != config.id)
-        .sort((a, b) => moment(a.dateStart).isBefore(b.dateStart));
+        .sort((a, b) => moment(b.dateStart).diff(a.dateStart));
 
       const previousConfig = configList.length > 0 ? configList.find(c => moment(config.dateStart).add(-1, 'days').isSame(moment(c.dateEnd))) : null;
       const nextConfig = configList.length > 0 ? configList.find(c => moment(config.dateEnd).add(1, 'days').isSame(moment(c.dateStart))) : null;
@@ -1146,7 +1257,7 @@ export default {
               <div class="custom-checkbox ${current ? 'active' : ''}" data-type="meal"></div>
             </td>
             <td>
-              <div class="custom-checkbox ${!kd.canDelivery ? 'disabled' : ''}" data-type="delivery"></div>
+              <div class="custom-checkbox ${!kd.deliveryId ? 'disabled' : ''}" data-type="delivery"></div>
             </td>
             <td>
               <div class="custom-checkbox ${(current && current.publicHoliday) ? 'active' : ''}" data-type="holiday"></div>
@@ -1407,7 +1518,7 @@ export default {
 
       const listConfigs = state.userMealConfigs
         .filter(c => c.userId == user.id && c.id != config.id)
-        .sort((a, b) => moment(a.dateStart).isBefore(b.dateStart));
+        .sort((a, b) => moment(b.dateStart).diff(a.dateStart));
 
       Swal.mixin({
         customClass: {
@@ -1476,7 +1587,10 @@ export default {
       const userlist = state.users.filter(u => u.isStaff == false).sort((a, b) => {
         if (a.lastname < b.lastname) return -1;
         if (a.lastname > b.lastname) return 1;
-        return a.civility - b.civility;
+        return a.id - b.id;
+      }).filter(u => {
+        const usr = state.users.filter(u2 => `${u2.lastname} ${u2.firstname}` == `${u.lastname} ${u.firstname}`);
+        return usr.length == 1 || (usr.length > 1 && usr[usr.length - 1].id == u.id);
       }).map((user) => {
         return `
           <li class="select-item" data-id="${user.id}">
@@ -1554,13 +1668,15 @@ export default {
             list.innerHTML = state.users.filter(u => u.isStaff == false).sort((a, b) => {
               if (a.lastname < b.lastname) return -1;
               if (a.lastname > b.lastname) return 1;
-              return a.civility - b.civility;
+              return a.id - b.id;
+            }).filter(u => {
+              const usr = state.users.filter(u2 => `${u2.lastname} ${u2.firstname}` == `${u.lastname} ${u.firstname}`);
+              return usr.length == 1 || (usr.length > 1 && usr[usr.length - 1].id == u.id);
             }).map((user) => {
               return `
-              <li class="select-item" data-id="${user.id}">
-                <p>${user.civility} <span class="filter">${user.lastname}</span></p>
-              </li>
-              `;
+                <li class="select-item" data-id="${user.id}">
+                  <p>${user.civility} <span class="filter">${user.lastname}</span></p>
+                </li>`;
             }).join('');
           });
           document.getElementById('update-users-list').addEventListener('click', (e) => {
@@ -1783,7 +1899,7 @@ export default {
       const defaultDaysConfig = listDate.map((date) => {
         return `'${date}': true`;
       }).join(',') ?? '';
-      const mealList = state.kindMeals.filter(kd => !isStaff || kd.isStaff == isStaff).map((kd) => {
+      const mealList = state.kindMeals.filter(kd => (kd.isStaff == isStaff || !isStaff) && kd.canGuest).map((kd) => {
         return `<tr data-id="${kd.id}" data-meal="false" data-delivery="false" data-config="{${defaultDaysConfig}}">
             <td>
               ${kd.label}
@@ -1842,7 +1958,7 @@ export default {
         showDenyButton: false,
         willOpen: () => {
           document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
-            if (!(e.target.closest('tr').dataset.meal == "true") && !(e.target.closest('div').dataset.type && e.target.closest('div').dataset.type == "meal")) return;
+            if (!(e.target.closest('tr') && e.target.closest('tr').dataset.meal == "true") && !(e.target.closest('div').dataset.type && e.target.closest('div').dataset.type == "meal")) return;
             if (e.target.closest('div').classList.contains('custom-checkbox') && e.target.closest('div').dataset.type) {
               const checkbox = e.target.closest('div');
 
@@ -2391,8 +2507,8 @@ export default {
       const configsByDate = listDate.map((date) => {
         return {
           date,
-          config: this.getConfigForDate(userId, date),
-          events: this.getEventsForDate(userId, date),
+          config: util.getConfigForDate(userId, date),
+          events: util.getEventsForDate(userId, date),
         };
       });
       const mealList = state.kindMeals.map((kd) => {
@@ -2419,7 +2535,7 @@ export default {
           const day = moment.utc(cd.date, "DD-MM-YYYY").locale('en').format("dddd").toLowerCase();
 
           if (dayElemConf && dayElemConf[day]) {
-            if (!(dayElemConf.publicHoliday == 0 && this.publicHolidayCheck(moment.utc(cd.date, "DD-MM-YYYY")))) {
+            if (!(dayElemConf.publicHoliday == 0 && util.publicHolidayCheck(moment.utc(cd.date, "DD-MM-YYYY")))) {
               mealIsActive = true;
               if (dayElemConf.delivery) {
                 deliveryIsActive = true;
@@ -2456,7 +2572,7 @@ export default {
               <div class="custom-checkbox ${currentDaysConfigMeal[listDate[0]] ? 'active' : ''}" data-type="meal"></div>
             </td>
             <td>
-              <div class="custom-checkbox ${!kd.canDelivery ? 'disabled' : ''}" data-type="delivery"></div>
+              <div class="custom-checkbox ${!kd.deliveryId ? 'disabled' : ''}" data-type="delivery"></div>
             </td>
           </tr> `;
         }
@@ -2491,7 +2607,7 @@ export default {
               </div>
             </td>
             <td>
-              <div class="btn-select ${!kd.canDelivery ? 'not-delivery' : ''}" data-type="delivery" data-nb="${Object.values(currentDaysConfigDelivery).filter(c => c == true).length}" data-value="${JSON.stringify(currentDaysConfigDelivery).replaceAll('"', "'")}">
+              <div class="btn-select ${!kd.deliveryId ? 'not-delivery' : ''}" data-type="delivery" data-nb="${Object.values(currentDaysConfigDelivery).filter(c => c == true).length}" data-value="${JSON.stringify(currentDaysConfigDelivery).replaceAll('"', "'")}">
                 <div class="select-label">
                   <p class="current-choice"></p>
                 </div>
@@ -2975,8 +3091,10 @@ export default {
           </li>
         `};
       });
+      const sortedList = ([...guestlist, ...eventlist]).sort((a, b) => moment(a.created).isBefore(moment(b.created)) ? 1 : -1);
+
       Swal.mixin({
-        width: '40rem',
+        width: '50rem',
         customClass: {
           confirmButton: "btn btn-close",
           title: 'text-2xl',
@@ -2995,7 +3113,7 @@ export default {
               <div class="default-list-container">
                 <input type="text" id="input-search-list" class="btn-input btn-search" value="${searchValue}" placeholder="Rechercher par nom" />
                 <ul class="default-list history-list update-user-events-list update-guests-list" id="update-user-guest-events-list">
-                  ${[guestlist, eventlist].flat().sort((a, b) => moment(a.created).isBefore(moment(b.created))).map(e => e.html).join('')}
+                  ${sortedList.map(e => e.html).join('')}
                 </ul>
               </div>
               <div class="content-input">
@@ -3189,7 +3307,8 @@ export default {
           </li>
         `};
             });
-            document.getElementById('update-user-guest-events-list').innerHTML = [newGuestlist, newEventlist].flat().sort((a, b) => moment(a.created).isBefore(moment(b.created))).map(e => e.html).join('');
+            const newSortedList = ([...newEventlist, ...newGuestlist]).sort((a, b) => moment(a.created).isBefore(moment(b.created)) ? 1 : -1);
+            document.getElementById('update-user-guest-events-list').innerHTML = newSortedList.map((e) => e.html).join('');
             updateList();
           });
           document.getElementById('input-search-list').addEventListener('input', (e) => {
@@ -3218,65 +3337,104 @@ export default {
         },
       });
     },
-    getConfigForDate(userId, date) {
-      const previousConfigs = state.userMealConfigs.filter(c => c.userId == userId)
-        .filter(cfg => moment(cfg.dateStart).isSameOrBefore(moment.utc(date, "DD-MM-YYYY")))
-        .sort((a, b) => moment(a.dateStart).isBefore(b.dateStart));
-      return previousConfigs.length > 0 ? previousConfigs[0] : null;
-    },
-    getEventsForDate(userId, date) {
-      return state.userEvents.filter(g => g.userId == userId && g.elements.find(el => moment.utc(date, "DD-MM-YYYY").isBetween(el.dateStart, el.dateEnd, 'day', '[]'))).sort((a, b) => moment(a.created).diff(moment(b.created)));
-    },
-    getGuestsForDate(userId, date) {
-      return state.guests.filter(g => g.userId == userId && g.elements.find(el => moment.utc(date, "DD-MM-YYYY").isBetween(el.dateStart, el.dateEnd, 'day', '[]'))).sort((a, b) => moment(a.created).diff(moment(b.created)));
-    },
-    publicHolidayCheck(dateInput) {
-      const date = moment(dateInput);
-      const annee = date.year();
-      const joursFeries = (this.joursFeries && this.joursFeries[annee]) ? this.joursFeries[annee] : this.joursFeriesFrance(annee);
-      this.joursFeries[annee] = joursFeries;
+    openExportModal() {
+      const listWeeks = [];
+      Swal.fire({
+        title: 'Exporter',
+        showCancelButton: false,
+        confirmButtonText: 'Fermer',
+        customClass: {
+          confirmButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false,
+        html: `
+            <div class="export-modal-container modal-container">
+              <div class="double-switch" data-value="days" id="period-switch">
+                <button class="btn-switch-choice active" data-option="days">Jours</button>
+                <button class="btn-switch-choice" data-option="months">Mois</button>
+                <span class="btn-element"></span>
+              </div>
+              <div class="export-list">
+                <button class="export-btn" id="left-btn-date">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+                <div class="btn-list-container" id="export-btn-list" data-value="${moment().set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).add(1, 'days').format('DD-MM-YYYY')}">
+                </div>
+                <button class="export-btn right" id="right-btn-date">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            `,
+        willOpen: () => {
+          function updateList() {
+            document.getElementById('export-btn-list').classList.remove('active');
+            const periodValue = document.getElementById('period-switch').dataset.value;
+            const dateValue = document.getElementById('export-btn-list').dataset.value;
+            const format = document.getElementById('period-switch').dataset.value == 'days' ? 'dddd D MMMM' : 'MMMM YYYY';
+            const date = moment(dateValue, 'DD-MM-YYYY');
+            const listDates = [moment(date), moment(date.add(1, periodValue)), moment(date.add(1, periodValue))];
+            document.getElementById('export-btn-list').innerHTML = listDates.map(d => `
+              <button class="btn btn-default" data-date="${d.format('DD-MM-YYYY')}">${d.format(format)}</button>
+            `).join('');
+            setTimeout(() => {
+              document.getElementById('export-btn-list').classList.add('active');
+            }, 100);
+          }
+          updateList();
+          document.getElementById('period-switch').addEventListener('click', (e) => {
+            if (e.target.closest('button') && e.target.closest('button').classList.contains('btn-switch-choice')) {
+              if (e.target.closest('button').classList.contains('active')) {
+                return;
+              }
+              document.getElementById('period-switch').querySelectorAll('.btn-switch-choice').forEach((btn) => {
+                btn.classList.remove('active');
+              });
+              e.target.closest('button').classList.add('active');
+              e.target.closest('#period-switch').dataset.value = e.target.closest('button').dataset.option;
+              if (e.target.closest('button').dataset.option == 'days') {
+                document.getElementById('export-btn-list').dataset.value = moment().set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).add(1, 'days').format('DD-MM-YYYY');
+              }
+              else {
+                document.getElementById('export-btn-list').dataset.value = moment().subtract(1, 'months').set({ date: 1, hour: 0, minute: 0, second: 0, millisecond: 0 }).format('DD-MM-YYYY');
+              }
+              updateList();
+            }
+          });
+          document.getElementById('left-btn-date').addEventListener('click', () => {
+            const periodValue = document.getElementById('period-switch').dataset.value;
+            const dateValue = document.getElementById('export-btn-list').dataset.value;
+            const newDate = moment(dateValue, 'DD-MM-YYYY').subtract(3, periodValue);
+            document.getElementById('export-btn-list').dataset.value = newDate.format('DD-MM-YYYY');
+            updateList();
+          });
+          document.getElementById('right-btn-date').addEventListener('click', () => {
+            const periodValue = document.getElementById('period-switch').dataset.value;
+            const dateValue = document.getElementById('export-btn-list').dataset.value;
+            const newDate = moment(dateValue, 'DD-MM-YYYY').add(3, periodValue);
+            document.getElementById('export-btn-list').dataset.value = newDate.format('DD-MM-YYYY');
+            updateList();
+          });
+          document.getElementById('export-btn-list').addEventListener('click', (e) => {
+            if (e.target.closest('button') && e.target.closest('button').classList.contains('btn')) {
+              const periodValue = document.getElementById('period-switch').dataset.value;
+              const dateValue = e.target.closest('button').dataset.date;
 
-      return joursFeries.some(jf => jf.isSame(date, "day"));
-    },
-    joursFeriesFrance(annee) {
-      const datePaques = moment(this.equationDePaques(annee));
-
-      return [
-        moment(`${annee}-01-01`),                       // Jour de l'an
-        // datePaques.clone().subtract(2, "days"),         // Vendredi Saint (en Alsace-Moselle uniquement)
-        datePaques,                                     // Pâques
-        datePaques.clone().add(1, "days"),              // Lundi de Pâques
-        moment(`${annee}-05-01`),                       // Fête du Travail
-        moment(`${annee}-05-08`),                       // Victoire 1945
-        datePaques.clone().add(39, "days"),             // Ascension
-        datePaques.clone().add(49, "days"),             // Pentecôte
-        datePaques.clone().add(50, "days"),             // Lundi de Pentecôte
-        moment(`${annee}-07-14`),                       // Fête Nationale
-        moment(`${annee}-08-15`),                       // Assomption
-        moment(`${annee}-11-01`),                       // Toussaint
-        moment(`${annee}-11-11`),                       // Armistice
-        moment(`${annee}-12-25`)                        // Noël
-      ];
-    },
-    equationDePaques(annee) {
-      const a = annee % 19;
-      const b = Math.floor(annee / 100);
-      const c = annee % 100;
-      const d = Math.floor(b / 4);
-      const e = b % 4;
-      const f = Math.floor((b + 8) / 25);
-      const g = Math.floor((b - f + 1) / 3);
-      const h = (19 * a + b - d - g + 15) % 30;
-      const i = Math.floor(c / 4);
-      const k = c % 4;
-      const l = (32 + 2 * e + 2 * i - h - k) % 7;
-      const m = Math.floor((a + 11 * h + 22 * l) / 451);
-      const mois = Math.floor((h + l - 7 * m + 114) / 31);
-      const jour = ((h + l - 7 * m + 114) % 31) + 1;
-      return new Date(annee, mois - 1, jour);
+              window.open(`/export-meals/${periodValue}/${dateValue}`, '_blank');
+            }
+          });
+        },
+        // }).then((result) => {
+        //   document.getElementById('planning-wait').classList.remove('active');
+      });
     },
     getUserConfigMeal(userId, kindMealId) {
-      const config = this.getConfigForDate(userId, moment(this.date).format('DD-MM-YYYY'));
+      const config = util.getConfigForDate(userId, moment(this.date).format('DD-MM-YYYY'));
       if (config && config.elements.find(el => el.idKindMeal == kindMealId)) {
         return config.elements.find(el => el.idKindMeal == kindMealId)[moment(this.date).format('dddd').toLowerCase()];
       }
@@ -3292,131 +3450,125 @@ export default {
   },
   computed: {
     getAllKindMeal() {
-      return state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (this.isStaffMealView ? kd.isStaff : true));
-    },
-    getAllUser() {
-      return state.users.filter(u => u.isStaff == this.isStaffMealView).sort((a, b) => {
-        if (a.lastname < b.lastname) return -1;
-        if (a.lastname > b.lastname) return 1;
-        return a.civility - b.civility;
-      });
+      return util.getAllKindMeal(this.isStaffMealView, this.date)
     },
     getAllUserWithData() {
-      const allUser = [...this.getAllUser, { id: null }].map(user => {
-        let values = null;
-        const config = this.getConfigForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-        const events = this.getEventsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-        const guests = this.getGuestsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
+      return util.getAllUserWithData(this.isStaffMealView, this.date);
+      // const allUser = [...util.getAllUser(this.isStaffMealView), { id: null }].map(user => {
+      //   let values = null;
+      //   const config = util.getConfigForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
+      //   const events = util.getEventsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
+      //   const guests = util.getGuestsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
 
-        if (user.id !== null) {
-          if (!config || config.dateEnd && moment(config.dateEnd).isBefore(this.date)) {
-            return null;
-          }
-          values = this.getAllKindMeal.map((kd) => {
-            const dayEvents = [];
-            let returnValue = {};
-            events.forEach((ev) => {
-              ev.elements.forEach((el) => {
-                if (el.idKindMeal == kd.id && this.date.isBetween(moment(el.dateStart), moment(el.dateEnd), 'day', '[]')) {
-                  dayEvents.push(el);
-                }
-              });
-            });
+      //   if (user.id !== null) {
+      //     if (!config || config.dateEnd && moment(config.dateEnd).isBefore(this.date)) {
+      //       return null;
+      //     }
+      //     values = util.getAllKindMeal(this.isStaffMealView, this.date).map((kd) => {
+      //       const dayEvents = [];
+      //       let returnValue = {};
+      //       events.forEach((ev) => {
+      //         ev.elements.forEach((el) => {
+      //           if (el.idKindMeal == kd.id && this.date.isBetween(moment(el.dateStart), moment(el.dateEnd), 'day', '[]')) {
+      //             dayEvents.push(el);
+      //           }
+      //         });
+      //       });
 
-            if (config && config.elements.find(el => el.idKindMeal == kd.id)) {
-              const conf = config.elements.find(el => el.idKindMeal == kd.id);
+      //       if (config && config.elements.find(el => el.idKindMeal == kd.id)) {
+      //         const conf = config.elements.find(el => el.idKindMeal == kd.id);
 
-              if (conf.publicHoliday == 0 && this.publicHolidayCheck(this.date)) {
-                returnValue = {
-                  meal: false,
-                  delivery: false,
-                };
-              }
-              else {
-                returnValue = {
-                  meal: conf[moment(this.date).locale('en').format('dddd').toLowerCase()] || false,
-                  delivery: (conf[moment(this.date).locale('en').format('dddd').toLowerCase()] && conf.delivery) || false,
-                };
-              }
-            }
-            else {
-              returnValue = {
-                meal: false,
-                delivery: false,
-              };
-            }
-            dayEvents.forEach((ev) => {
-              if (ev.isAbsence) {
-                returnValue = {
-                  meal: false,
-                  delivery: false,
-                };
-              }
-              else {
-                returnValue = {
-                  meal: true,
-                  delivery: ev.delivery ? true : false,
-                };
-              }
-            });
-            return {
-              id: kd.id,
-              canDelivery: kd.canDelivery,
-              ...returnValue,
-            };
-          });
-        }
-        const guestsValues = guests.filter(g => g.isStaff == this.isStaffMealView).map(g => {
-          let dateStart = null;
-          let dateEnd = null;
-          const gValues = this.getAllKindMeal.map((kd) => {
-            let returnValue = {};
-            const element = g.elements ? g.elements.find(el => el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= this.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= this.date.format("YYYY-MM-DD")) : null;
-            if (element) {
-              returnValue = {
-                meal: true,
-                delivery: element.delivery || false
-              };
-              if (!dateStart || (moment(element.dateStart).isBefore(dateStart))) {
-                dateStart = moment(element.dateStart).format('DD/MM/YYYY');
-              }
-              if (!dateEnd || (moment(element.dateEnd).isAfter(dateEnd))) {
-                dateEnd = moment(element.dateEnd).format('DD/MM/YYYY');
-              }
-            }
-            else {
-              returnValue = {
-                meal: false,
-                delivery: false,
-              };
-            }
-            return {
-              id: kd.id,
-              canDelivery: kd.canDelivery,
-              ...returnValue,
-            };
-          });
-          return {
-            id: g.id,
-            nbGuests: g.nbGuests,
-            label: g.label,
-            info: g.info,
-            values: gValues,
-            dateStart: dateStart,
-            dateEnd: dateEnd
-          };
-        });
-        if (user.id == null && !guestsValues.length) {
-          return null;
-        }
+      //         if (conf.publicHoliday == 0 && util.publicHolidayCheck(this.date)) {
+      //           returnValue = {
+      //             meal: false,
+      //             delivery: false,
+      //           };
+      //         }
+      //         else {
+      //           returnValue = {
+      //             meal: conf[moment(this.date).locale('en').format('dddd').toLowerCase()] || false,
+      //             delivery: (conf[moment(this.date).locale('en').format('dddd').toLowerCase()] && conf.delivery) || false,
+      //           };
+      //         }
+      //       }
+      //       else {
+      //         returnValue = {
+      //           meal: false,
+      //           delivery: false,
+      //         };
+      //       }
+      //       dayEvents.forEach((ev) => {
+      //         if (ev.isAbsence) {
+      //           returnValue = {
+      //             meal: false,
+      //             delivery: false,
+      //           };
+      //         }
+      //         else {
+      //           returnValue = {
+      //             meal: true,
+      //             delivery: ev.delivery ? true : false,
+      //           };
+      //         }
+      //       });
+      //       return {
+      //         id: kd.id,
+      //         canDelivery: kd.canDelivery,
+      //         ...returnValue,
+      //       };
+      //     });
+      //   }
+      //   const guestsValues = guests.filter(g => g.isStaff == this.isStaffMealView).map(g => {
+      //     let dateStart = null;
+      //     let dateEnd = null;
+      //     const gValues = util.getAllKindMeal(this.isStaffMealView, this.date).map((kd) => {
+      //       let returnValue = {};
+      //       const element = g.elements ? g.elements.find(el => el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= this.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= this.date.format("YYYY-MM-DD")) : null;
+      //       if (element) {
+      //         returnValue = {
+      //           meal: true,
+      //           delivery: element.delivery || false
+      //         };
+      //         if (!dateStart || (moment(element.dateStart).isBefore(dateStart))) {
+      //           dateStart = moment(element.dateStart).format('DD/MM/YYYY');
+      //         }
+      //         if (!dateEnd || (moment(element.dateEnd).isAfter(dateEnd))) {
+      //           dateEnd = moment(element.dateEnd).format('DD/MM/YYYY');
+      //         }
+      //       }
+      //       else {
+      //         returnValue = {
+      //           meal: false,
+      //           delivery: false,
+      //         };
+      //       }
+      //       return {
+      //         id: kd.id,
+      //         canDelivery: kd.canDelivery,
+      //         ...returnValue,
+      //       };
+      //     });
+      //     return {
+      //       id: g.id,
+      //       nbGuests: g.nbGuests,
+      //       label: g.label,
+      //       info: g.info,
+      //       values: gValues,
+      //       dateStart: dateStart,
+      //       dateEnd: dateEnd
+      //     };
+      //   });
+      //   if (user.id == null && !guestsValues.length) {
+      //     return null;
+      //   }
 
-        return {
-          ...user,
-          values,
-          guests: guestsValues,
-        };
-      }).filter(u => u != null);
-      return allUser;
+      //   return {
+      //     ...user,
+      //     values,
+      //     guests: guestsValues,
+      //   };
+      // }).filter(u => u != null);
+      // return allUser;
     },
     getDayDate() {
       return moment(this.date).format('dddd D MMMM YYYY');
@@ -3426,7 +3578,7 @@ export default {
 </script>
 
 <template>
-  <div class="general-container meal-container">
+  <div v-if="getAllUserWithData.length" class="general-container meal-container">
     <h1>Repas - {{ getDayDate }}</h1>
     <div class="btn-container">
       <button class="btn btn-setting" @click="configModal">
@@ -3440,7 +3592,7 @@ export default {
       </label>
     </div>
     <div class="btn-container right">
-      <button class="btn" @click="openExport">Exporter</button>
+      <button class="btn" @click="openExportModal">Exporter</button>
     </div>
     <Meals :isStaffMealView="isStaffMealView" :date="date" :kindMeals="getAllKindMeal"
       :usersWithData="getAllUserWithData" />

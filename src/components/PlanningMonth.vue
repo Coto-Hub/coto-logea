@@ -146,17 +146,6 @@ export default {
             }
             return planningDay;
         },
-        getAnimationsPlanning(date) {
-            return false;
-            const todayList = state.plannings.filter(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD'));
-            return todayList.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)).map(a => {
-                return {
-                    id: a.id,
-                    content: a.content,
-                    hour: moment(a.dateTime).minute() == 0 ? moment(a.dateTime).format('HH') + 'h' : moment(a.dateTime).format('HH:mm').replace(':', 'h'),
-                };
-            });
-        },
         printPlanning() {
             html2canvas(document.querySelector("#planning-export"), {
                 allowTaint: true,
@@ -173,34 +162,6 @@ export default {
         },
         chooseColor(hex) {
             this.choice[this.currentChoice] = hex;
-        },
-        getCustomPlanning(date) {
-            return false;
-            const today = state.plannings.find(p => moment(p.dateTime).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') && p.animationId == null);
-            if (today) {
-                return {
-                    id: today.id,
-                    content: today.content,
-                };
-            }
-        },
-        getDecoration(date, placementChoice) {
-            return false;
-            const decoration = state.decorations.find(d => moment(d.date).format('YYYY-MM-DD') == moment(date).format('YYYY-MM-DD') && d.placementChoice == placementChoice);
-            if (decoration) {
-                let icon = state.icons.find(i => i.id == decoration.iconId);
-                if (icon) {
-                    return {
-                        id: decoration.id,
-                        placementChoice: decoration.placementChoice,
-                        icon: {
-                            id: decoration.iconId,
-                            path: icon.path,
-                        },
-                    };
-                }
-            }
-            return false;
         },
         saveConfig() {
             const config = state.month_configs.find(c => c.month == this.month);

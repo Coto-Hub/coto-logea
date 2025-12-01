@@ -19,6 +19,7 @@ export const state = reactive({
     users: [],
     guests: [],
     userEvents: [],
+    joursFeries: {}
 });
 
 // const URL = `${import.meta.env.VITE_URL}`;
@@ -52,8 +53,8 @@ socket.on("session", ({ sessionObj }) => {
     localStorage.setItem("sessionObj", sessionObjEncrypt.toString());
 });
 
-let regex = /\/menus\/[0-9]+\/today/i;
-if (regex.test(window.location.pathname)) {
+let regexMeals = /\/menus\/[0-9]+\/today/i;
+if (regexMeals.test(window.location.pathname)) {
     const id = window.location.pathname.replace('/menus/', '').replace('/today', '');
     socket.emit("init display menu", { id });
 }
