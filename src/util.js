@@ -44,9 +44,6 @@ export function getConfigForDate(userId, date) {
     const previousConfigs = state.userMealConfigs.filter(c => c.userId == userId)
         .filter(cfg => moment.utc(cfg.dateStart).isSameOrBefore(moment.utc(date, "DD-MM-YYYY")))
         .sort((a, b) => moment.utc(b.dateStart).diff(moment.utc(a.dateStart)));
-    if (userId == 3) {
-        console.log("previousConfigs", previousConfigs);
-    }
     return previousConfigs.length > 0 ? previousConfigs[0] : null;
 }
 export function getEventsForDate(userId, date) {
@@ -67,8 +64,6 @@ export function getAllUserWithData(isStaff, date) {
 
         if (user.id !== null) {
             if (!config || config.dateEnd && moment(config.dateEnd).isBefore(date)) {
-                console.log("user without config", user);
-                console.log(config ? config.dateEnd : null);
                 return null;
             }
             values = getAllKindMeal(isStaff, date).map((kd) => {

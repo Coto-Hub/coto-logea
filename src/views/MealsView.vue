@@ -3578,7 +3578,7 @@ export default {
 </script>
 
 <template>
-  <div v-if="getAllUserWithData.length" class="general-container meal-container">
+  <div class="general-container meal-container">
     <h1>Repas - {{ getDayDate }}</h1>
     <div class="btn-container">
       <button class="btn btn-setting" @click="configModal">
