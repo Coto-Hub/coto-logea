@@ -372,7 +372,7 @@ export default {
             Swal.clickDeny();
             this.editUserModal(isStaff, user);
           });
-          if (configWithoutEndDate) {
+          if (configWithoutEndDate || configList.length == 0) {
             document.getElementById("trash-user-btn").addEventListener('click', (e) => {
               Swal.clickDeny();
               this.deleteUserModal(isStaff, user);
@@ -403,7 +403,7 @@ export default {
           });
         },
       }).then((data) => {
-        if (data.isDismissed || data.isConfirmed) {
+        if ((data.isDismissed && configList.length != 0) || data.isConfirmed) {
           this.usersModal(isStaff);
         }
       });
@@ -691,13 +691,17 @@ export default {
         if (data.isConfirmed) {
           if (!lastConfig) {
             socket.emit('delete user', user.id);
+            this.usersModal(isStaff);
           }
           else {
             data.value.configId = configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0].id;
             socket.emit('edit user meal config end', data.value);
+            this.showUserModal(isStaff, user.id);
           }
         }
-        this.showUserModal(isStaff, user.id);
+        else {
+          this.showUserModal(isStaff, user.id);
+        }
       });
     },
     addMealModal() {
