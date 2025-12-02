@@ -71,7 +71,11 @@ export default {
               delivery: {
                 midday: { value: 0, isEvent: false },
                 evening: { value: 0, isEvent: false },
-              }
+              },
+              eating: {
+                midday: false,
+                evening: false,
+              },
             });
           }
           const current = rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`);
@@ -149,6 +153,12 @@ export default {
             }
             if (current.delivery.evening.value > 0) {
               current.eatingArea.evening = "Étage";
+            }
+            if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 1))) {
+              current.eating.midday = true;
+            }
+            if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 2))) {
+              current.eating.evening = true;
             }
           }
         }
@@ -231,10 +241,10 @@ export default {
 
   .export-meals-view .export-container {
     @apply absolute inset-x-0 top-0 flex-col w-full h-auto max-w-none max-h-none p-0 m-0;
-    aspect-ratio: none;
 
     .export-page-component {
       @apply w-full break-after-page shadow-none m-0 px-5;
+      aspect-ratio: auto;
 
       h2 {
         @apply pb-6;

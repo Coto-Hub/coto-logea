@@ -1628,6 +1628,8 @@ main {
         tbody tr th,
         tbody tr td {
           min-width: 1.5vw;
+          height: 10px;
+          // min-height: 10px;
           // max-width: 0.1%;
           // width: 0.1%;
 
@@ -2080,9 +2082,9 @@ main {
       }
     }
 
-    .total-kd.hover-meal,
-    .column-header.hover-meal,
-    .meals-case-container.hover-meal,
+    &:not(.staff) .total-kd.hover-meal,
+    &:not(.staff) .column-header.hover-meal,
+    &:not(.staff) .meals-case-container.hover-meal,
     .meals-body .user-row:hover,
     .meals-body .guest-row:hover {
       @apply bg-rose-100;

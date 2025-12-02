@@ -130,7 +130,7 @@ export default {
 </script>
 
 <template>
-    <section class="general-input" @mouseout="dataHoverMealId = null">
+    <section class="general-input" :class="{ staff: isStaffMealView }" @mouseout="dataHoverMealId = null">
         <div class="meals-header">
             <div class="user-header">
                 <input type="text" v-model="userSearch" placeholder="Rechercher par nom..." />

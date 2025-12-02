@@ -63,7 +63,7 @@ export function getAllUserWithData(isStaff, date) {
         const guests = getGuestsForDate(user.id, date.format('DD-MM-YYYY'));
 
         if (user.id !== null) {
-            if (!config || config.dateEnd && moment(config.dateEnd).isBefore(date)) {
+            if ((!config || config.dateEnd && moment(config.dateEnd).isBefore(date)) && !isStaff) {
                 return null;
             }
             values = getAllKindMeal(isStaff, date).map((kd) => {

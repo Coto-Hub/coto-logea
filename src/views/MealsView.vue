@@ -36,8 +36,11 @@ export default {
       `,
       date: moment().set('hour', 0).set('minute', 0).set('second', 0),
       stringDate: '',
+      usersFilterData: {
+        check: false,
+        input: '',
+      },
       isStaffMealView: false,
-      filterUserByConfig: false,
     }
   },
   emits: [],
@@ -113,8 +116,8 @@ export default {
         html: `
             <div class="meal-modal-container modal-container">
               ${isStaff ? '' : `
-              <label for="filter-users-nb-config" class="btn-checkbox${this.filterUserByConfig ? ' active' : ''}">
-                <input type="checkbox" ${this.filterUserByConfig ? 'checked' : ''} id="filter-users-nb-config" class="hidden" />
+              <label for="filter-users-nb-config" class="btn-checkbox${this.usersFilterData.check ? ' active' : ''}">
+                <input type="checkbox" ${this.usersFilterData.check ? 'checked' : ''} id="filter-users-nb-config" class="hidden" />
                 <span class="checkmark">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
@@ -124,7 +127,7 @@ export default {
               </label>
               `}
               <div class="default-list-container">
-                <input type="text" id="input-search-list-user" class="btn-input btn-search" placeholder="Rechercher par nom" />
+                <input type="text" id="input-search-list-user" class="btn-input btn-search" value="${this.usersFilterData.input}" placeholder="Rechercher par nom" />
                 <ul class="signle-list default-list user-list" id="update-user-list">
                   ${userlist}
                 </ul>
@@ -136,17 +139,32 @@ export default {
         focusConfirm: false,
         showDenyButton: false,
         willOpen: () => {
-          if (this.filterUserByConfig) {
-            document.querySelectorAll('#update-user-list li').forEach((li) => {
-              if (li.dataset.configs == 0) {
-                li.style.display = 'flex';
+          function updateList() {
+            const checkbox = document.getElementById('filter-users-nb-config');
+            const list = document.getElementById('update-user-list');
+            const search = document.getElementById('input-search-list-user').value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('.filter').textContent.toLowerCase();
+              if (checkbox && checkbox.checked && li.dataset.configs != 0) {
+                li.style.display = 'none';
+              }
+              else if (label.indexOf(search) == -1) {
+                li.style.display = 'none';
               }
               else {
-                li.style.display = 'none';
+                li.style.display = 'flex';
               }
             });
           }
+          function getCurrentConfig() {
+            return {
+              check: document.getElementById('filter-users-nb-config') ? document.getElementById('filter-users-nb-config').checked : false,
+              input: document.getElementById('input-search-list-user').value,
+            };
+          }
+          updateList();
           document.getElementById("add-user").addEventListener('click', (e) => {
+            this.usersFilterData = getCurrentConfig();
             this.addUserModal(isStaff);
           });
           document.getElementById('update-user-list').addEventListener('update', () => {
@@ -176,6 +194,7 @@ export default {
             if (e.target && e.target.closest('li')) {
               const id = e.target.closest('li').dataset.id;
               if (id) {
+                this.usersFilterData = getCurrentConfig();
                 Swal.close();
                 this.showUserModal(isStaff, id);
               }
@@ -183,37 +202,22 @@ export default {
             return;
           });
           document.getElementById('input-search-list-user').addEventListener('input', (e) => {
-            const list = document.getElementById('update-user-list');
-            const search = e.target.value.toLowerCase();
-            list.querySelectorAll('li').forEach((li) => {
-              const label = li.querySelector('.filter').textContent.toLowerCase();
-              if (label.indexOf(search) == -1) {
-                li.style.display = 'none';
-              }
-              else {
-                li.style.display = 'flex';
-              }
-            });
+            updateList();
           });
           if (document.getElementById('filter-users-nb-config')) {
             document.getElementById('filter-users-nb-config').addEventListener('click', (e) => {
-              const isChecked = e.target.checked;
-              this.filterUserByConfig = isChecked;
               e.target.closest('label').classList.toggle('active');
-              document.querySelectorAll('#update-user-list li').forEach((li) => {
-                if (isChecked && li.dataset.configs == 0) {
-                  li.style.display = 'flex';
-                }
-                else if (!isChecked) {
-                  li.style.display = 'flex';
-                }
-                else {
-                  li.style.display = 'none';
-                }
-              });
+              updateList();
             });
           }
         },
+      }).then((data) => {
+        if (data.isConfirmed) {
+          this.usersFilterData = {
+            check: false,
+            input: '',
+          };
+        }
       });
     },
     mealsModal() {
@@ -518,6 +522,7 @@ export default {
       });
     },
     editUserModal(isStaff, user) {
+      const userData = state.users.find(u => u.id == user.id && u.isStaff == isStaff);
       Swal.mixin({
         customClass: {
           confirmButton: "btn btn-confirm",
@@ -530,9 +535,9 @@ export default {
         html: `
         <div class="add-user-modal-container modal-container">
               <div class="input-row">
-                <div class="btn-switch-select" id="btn-switch-civility" data-value="${user.civility}">
+                <div class="btn-switch-select" id="btn-switch-civility" data-value="${userData.civility}">
                   <div class="switch-label">
-                    <p class="current-choice">${user.civility}</p>
+                    <p class="current-choice">${userData.civility}</p>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                     </svg>
@@ -542,14 +547,14 @@ export default {
                     <li class="choice" data-choice="M.">M.</li>
                   </ul>
                 </div>
-                <input type="text" id="input-user-lastname" class="btn-input" value="${user.lastname}" placeholder="Nom" />
+                <input type="text" id="input-user-lastname" class="btn-input" value="${userData.lastname}" placeholder="Nom" />
               </div>
               <div class="input-row">
-                <input type="text" id="input-user-firstname" class="btn-input" value="${user.firstname}" placeholder="Prénom" />
+                <input type="text" id="input-user-firstname" class="btn-input" value="${userData.firstname}" placeholder="Prénom" />
               </div>
               <div class="input-row">
                 <p>Lieu de repas :</p>
-                <input type="text" id="input-user-eating-area" class="btn-input" value="${user.eatingArea}" placeholder="Salle / Cosy" />
+                <input type="text" id="input-user-eating-area" class="btn-input" value="${userData.eatingArea}" placeholder="Salle / Cosy" />
               </div>
             </div>
         `,
@@ -635,7 +640,8 @@ export default {
       if (configList && configList.length > 0) {
         lastConfig = configList.find(c => c.dateEnd == null) || configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0];
       }
-      if (!lastConfig) {
+      const eventsList = state.userEvents.filter(e => e.userId == user.id);
+      if (!lastConfig && !eventsList.length) {
         data.html = `
             <div class="delete-user-modal-container modal-container">
               <h2>Vous allez supprimer <strong>${user.civility} ${user.lastname} ${user.firstname}</strong>.</h2>
@@ -666,6 +672,17 @@ export default {
           else if (lastConfig && moment(values.date).isSameOrBefore(moment(lastConfig.dateStart))) {
             Swal.showValidationMessage(`La date de fin doit être postérieure à la date de début de la dernière configuration (${moment(lastConfig.dateStart).format('DD/MM/YYYY')}).`);
           }
+          else if (eventsList && eventsList.find(e => moment(values.date).isSameOrBefore(moment(e.date)))) {
+            let lastDate = null;
+            eventsList.forEach(e => {
+              e.elements.forEach(el => {
+                if (!lastDate || moment(el.dateEnd).isAfter(moment(lastDate))) {
+                  lastDate = el.dateEnd;
+                }
+              });
+            });
+            Swal.showValidationMessage(`La date de fin doit être postérieure à la date de l'événement le plus récent (${moment(lastDate).format('DD/MM/YYYY')}).`);
+          }
 
           return values;
         };
@@ -689,7 +706,7 @@ export default {
         preConfirm: data.preConfirm,
       }).then((data) => {
         if (data.isConfirmed) {
-          if (!lastConfig) {
+          if (!lastConfig && (eventsList && !eventsList.length)) {
             socket.emit('delete user', user.id);
             this.usersModal(isStaff);
           }
@@ -2129,7 +2146,7 @@ export default {
       const userGuest = guest.userId != null ? state.users.find(u => u.id == guest.userId) : null;
       const guestLabel = userGuest ? `Invité de ${userGuest.civility} ${userGuest.lastname}` : guest.label;
 
-      const mealList = state.kindMeals.filter(kd => !userGuest.isStaff || kd.isStaff == userGuest.isStaff).map((kd) => {
+      const mealList = state.kindMeals.filter(kd => ((guest && guest.isStaff) || (userGuest && userGuest.isStaff)) ? kd.isStaff : kd.canGuest).map((kd) => {
         const current = guest.elements.filter(e => e.idKindMeal == kd.id);
         const daysConfig = listDate.map((date) => {
           if (current.find(c => moment(date, 'DD-MM-YYYY').isBetween(moment(c.dateStart), moment(c.dateEnd), 'days', '[]'))) {
@@ -2169,6 +2186,7 @@ export default {
         title: `Modifier la configuration d'invité`,
         html: `
             <div id="click-container" class="add-user-config-modal-container modal-container">
+              <div class="trash-user-btn" id="trash-user-btn">${this.trashIcon}</div>
               <h2>${guestLabel} (${guest.nbGuests})</h2>
               <table class="table meal-table">
                 <thead>
@@ -2289,6 +2307,10 @@ export default {
               }
             });
           });
+          document.getElementById('trash-user-btn').addEventListener('click', (e) => {
+            Swal.clickDeny();
+            this.deleteGuestModal(guestId, searchValue, filterValue, startDateValue, endDateValue);
+          });
         },
         preConfirm: () => {
           const values = {
@@ -2357,7 +2379,9 @@ export default {
 
           socket.emit('edit guest config', data.value);
         }
-        this.showHistoryModal(searchValue, filterValue, startDateValue, endDateValue);
+        if (!data.isDenied) {
+          this.showHistoryModal(searchValue, filterValue, startDateValue, endDateValue);
+        }
       });
     },
     addEventModal(userId, dateStart, dateEnd) {
@@ -2975,7 +2999,9 @@ export default {
         this.showHistoryModal(searchValue, filterValue, dateStart, dateEnd);
       });
     },
-    deleteGuestModal(guest, searchValue, filterValue, dateStart, dateEnd) {
+    deleteGuestModal(guestId, searchValue, filterValue, dateStart, dateEnd) {
+      const guest = state.guests.find(g => g.id == guestId);
+      if (!guest) return;
       const userGuest = guest.userId != null ? state.users.find(u => u.id == guest.userId) : null;
       const guestLabel = userGuest ? `${userGuest.civility} ${userGuest.lastname}` : guest.label;
       Swal.mixin({
@@ -2986,7 +3012,7 @@ export default {
         },
         buttonsStyling: false
       }).fire({
-        title: `Supprimer un enregistrement`,
+        title: `Supprimer un invité`,
         html: `
             <div class="delete-event-modal-container modal-container">
               <h2 class="font-medium"><strong>${guest.nbGuests}</strong> ${guest.nbGuests > 1 ? `Invités` : `Invité`} - ${guestLabel}</h2>
@@ -3012,6 +3038,7 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
       }).then((data) => {
+        console.log(data);
         if (data.isConfirmed) {
           socket.emit('delete guest', guest.id);
         }

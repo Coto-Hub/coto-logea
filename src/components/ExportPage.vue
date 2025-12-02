@@ -145,10 +145,10 @@ export default {
                         </template>
                         <template v-else>
                             <td>
-                                <p>{{ row.eatingArea.midday }}</p>
+                                <p>{{ (row.eating && row.eating.midday) ? row.eatingArea.midday : '' }}</p>
                             </td>
                             <td>
-                                <p>{{ row.eatingArea.evening }}</p>
+                                <p>{{ (row.eating && row.eating.evening) ? row.eatingArea.evening : '' }}</p>
                             </td>
                             <td v-for="kd in row.mealsList" :key="kd.id" :class="kd.isEvent ? 'event' : ''">
                                 <p>{{ kd.value ? kd.value : '' }}</p>
@@ -163,6 +163,21 @@ export default {
                         <td v-for="kd in row.guestMealsList" :key="kd.id" :class="kd.value ? 'event' : ''">
                             <p>{{ kd.value ? kd.value : '' }}</p>
                         </td>
+                    </template>
+                </tr>
+                <tr v-for="index in 4">
+                    <td>
+                        <p></p>
+                    </td>
+                    <template v-if="isStaff">
+                        <td v-if="tableData.kindMeals.length" v-for="kd in tableData.kindMeals" :key="kd.id"></td>
+                    </template>
+                    <template v-else>
+                        <td colspan="2"></td>
+                        <td v-for="kd in tableData.kindMeals"></td>
+                        <td></td>
+                        <td></td>
+                        <td v-for="kd in tableData.kindMeals.filter(k => k.canGuest == true)"></td>
                     </template>
                 </tr>
             </tbody>
