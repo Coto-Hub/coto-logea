@@ -91,7 +91,17 @@ export default {
       });
     },
     usersModal(isStaff) {
-      const userlist = state.users.filter(u => u.isStaff == isStaff).sort((a, b) => {
+      const userlist = state.users.filter(u => {
+        if (u.isStaff != isStaff) return false;
+        if (!u.isActive) {
+          return state.userMealConfigs.find(c => {
+            if (c.userId != u.id) return false;
+            if (c.dateEnd == null || moment().isBetween(moment.utc(c.dateStart), moment.utc(c.dateEnd), 'day', '[]')) return true;
+            return false;
+          });
+        }
+        return true;
+      }).sort((a, b) => {
         if (a.lastname < b.lastname) return -1;
         if (a.lastname > b.lastname) return 1;
         return a.civility - b.civility;
@@ -133,6 +143,7 @@ export default {
                 </ul>
               </div>
               <button type="button" id="add-user" class="btn btn-confirm">Ajouter</button>
+              <button type="button" id="old-users" class="btn btn-default">Acien ${isStaff ? 'personnels' : 'résidents'}</button>
             </div>
         `,
         confirmButtonText: 'Fermer',
@@ -175,7 +186,17 @@ export default {
             }
             else {
               const list = document.getElementById('update-user-list');
-              list.innerHTML = state.users.filter(u => u.isStaff == isStaff).sort((a, b) => {
+              list.innerHTML = state.users.filter(u => {
+                if (u.isStaff != isStaff) return false;
+                if (!u.isActive) {
+                  return state.userMealConfigs.find(c => {
+                    if (c.userId != u.id) return false;
+                    if (c.dateEnd == null || moment().isBetween(moment.utc(c.dateStart), moment.utc(c.dateEnd), 'day', '[]')) return true;
+                    return false;
+                  });
+                }
+                return true;
+              }).sort((a, b) => {
                 if (a.lastname < b.lastname) return -1;
                 if (a.lastname > b.lastname) return 1;
                 return a.civility - b.civility;
@@ -201,6 +222,10 @@ export default {
             }
             return;
           });
+          document.getElementById("old-users").addEventListener('click', (e) => {
+            this.usersFilterData = getCurrentConfig();
+            this.oldUsersModal(isStaff);
+          });
           document.getElementById('input-search-list-user').addEventListener('input', (e) => {
             updateList();
           });
@@ -217,6 +242,110 @@ export default {
             check: false,
             input: '',
           };
+        }
+      });
+    },
+    oldUsersModal(isStaff) {
+      const userlist = state.users.filter(u => {
+        if (u.isStaff != isStaff) return false;
+        if (!u.isActive) {
+          return !state.userMealConfigs.find(c => {
+            if (c.userId != u.id) return false;
+            if (c.dateEnd == null || moment().isBetween(moment.utc(c.dateStart), moment.utc(c.dateEnd), 'day', '[]')) return true;
+            return false;
+          });
+        }
+        return false;
+      }).sort((a, b) => {
+        if (a.lastname < b.lastname) return -1;
+        if (a.lastname > b.lastname) return 1;
+        return a.civility - b.civility;
+      }).map((user) => {
+        const nbConfig = state.userMealConfigs.filter(c => c.userId == user.id).length;
+        return `
+          <li class="list-item${isStaff ? ' staff-item' : ''}" data-configs="${nbConfig}" data-id="${user.id}">
+            <p>${user.civility} <span class="filter">${user.lastname}</span> ${user.firstname}</p>
+            <div class="config-nb"><span>${nbConfig}</span> Config${nbConfig > 1 ? 's' : ''}</div>
+          </li>
+        `;
+      }).join('');
+      Swal.mixin({
+        width: '40rem',
+        customClass: {
+          confirmButton: "btn btn-close",
+          title: 'text-2xl',
+        },
+        buttonsStyling: false
+      }).fire({
+        title: `Liste ${isStaff ? 'de l\'ancien personnel' : 'des anciens résidents'} `,
+        html: `
+            <div class="meal-modal-container modal-container">
+              <div class="default-list-container">
+                <input type="text" id="input-search-list-user" class="btn-input btn-search" value="${this.usersFilterData.input}" placeholder="Rechercher par nom" />
+                <ul class="signle-list default-list user-list" id="update-user-list">
+                  ${userlist}
+                </ul>
+              </div>
+            </div>
+        `,
+        confirmButtonText: 'Fermer',
+        focusConfirm: false,
+        showDenyButton: false,
+        willOpen: () => {
+          function updateList() {
+            const list = document.getElementById('update-user-list');
+            const search = document.getElementById('input-search-list-user').value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('.filter').textContent.toLowerCase();
+              if (label.indexOf(search) == -1) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          }
+          updateList();
+          document.getElementById('update-user-list').addEventListener('update', () => {
+            if (document.getElementById('update-user-list').dataset.id) {
+              const id = document.getElementById('update-user-list').dataset.id;
+              Swal.clickDeny();
+              this.showUserModal(isStaff, id);
+            }
+            else {
+              const list = document.getElementById('update-user-list');
+              list.innerHTML = state.users.filter(u => u.isStaff == isStaff && (!u.isActive || !state.userMealConfigs.find(c => c.userId == u.id && moment().isBetween(moment(c.dateStart), moment(c.dateEnd), 'day', '[]')))).sort((a, b) => {
+                if (a.lastname < b.lastname) return -1;
+                if (a.lastname > b.lastname) return 1;
+                return a.civility - b.civility;
+              }).map((user) => {
+                const nbConfig = state.userMealConfigs.filter(c => c.userId == user.id).length;
+                return `
+          <li class="list-item${isStaff ? ' staff-item' : ''}" data-configs="${nbConfig}" data-id="${user.id}">
+            <p>${user.civility} <span class="filter">${user.lastname}</span> ${user.firstname}</p>
+            <div class="config-nb"><span>${nbConfig}</span> Config${nbConfig > 1 ? 's' : ''}</div>
+          </li>
+        `;
+              }).join('');
+            }
+          });
+          document.getElementById('update-user-list').addEventListener('click', (e) => {
+            if (e.target && e.target.closest('li')) {
+              const id = e.target.closest('li').dataset.id;
+              if (id) {
+                Swal.clickDeny();
+                this.showUserModal(isStaff, id);
+              }
+            }
+            return;
+          });
+          document.getElementById('input-search-list-user').addEventListener('input', (e) => {
+            updateList();
+          });
+        },
+      }).then((data) => {
+        if (data.isConfirmed || !data.isDenied) {
+          this.usersModal(isStaff);
         }
       });
     },
@@ -659,6 +788,7 @@ export default {
               <div class="date-container">
                 <input type="date" id="input-user-date-end" ${lastConfig ? `min="${moment(lastConfig.dateStart).add(1, 'days').format('YYYY-MM-DD')}"` : ''} value="" class="btn-input" />
               </div>
+              <p>Tous les événements de cet utilisateur seront désactivés après cette date.</p>
               <p class="warning-label">Cette action est irréversible.</p>
             </div>
         `;
@@ -671,17 +801,6 @@ export default {
           }
           else if (lastConfig && moment(values.date).isSameOrBefore(moment(lastConfig.dateStart))) {
             Swal.showValidationMessage(`La date de fin doit être postérieure à la date de début de la dernière configuration (${moment(lastConfig.dateStart).format('DD/MM/YYYY')}).`);
-          }
-          else if (eventsList && eventsList.find(e => moment(values.date).isSameOrBefore(moment(e.date)))) {
-            let lastDate = null;
-            eventsList.forEach(e => {
-              e.elements.forEach(el => {
-                if (!lastDate || moment(el.dateEnd).isAfter(moment(lastDate))) {
-                  lastDate = el.dateEnd;
-                }
-              });
-            });
-            Swal.showValidationMessage(`La date de fin doit être postérieure à la date de l'événement le plus récent (${moment(lastDate).format('DD/MM/YYYY')}).`);
           }
 
           return values;
@@ -706,15 +825,13 @@ export default {
         preConfirm: data.preConfirm,
       }).then((data) => {
         if (data.isConfirmed) {
-          if (!lastConfig && (eventsList && !eventsList.length)) {
-            socket.emit('delete user', user.id);
-            this.usersModal(isStaff);
-          }
-          else {
+          if (lastConfig) {
             data.value.configId = configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0].id;
             socket.emit('edit user meal config end', data.value);
-            this.showUserModal(isStaff, user.id);
           }
+          // Disable all user events after the end date TODO
+          socket.emit('delete user', { id: user.id, date: data.value.date });
+          this.usersModal(isStaff);
         }
         else {
           this.showUserModal(isStaff, user.id);

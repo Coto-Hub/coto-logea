@@ -229,7 +229,9 @@ module.exports = class MealsRequest {
         value: null,
       };
       const query = `
-        DELETE FROM Users WHERE Id = ? AND Id_company = ?;
+        UPDATE Users
+        SET Is_active = 0
+        WHERE Id = ? AND Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [id, companyId], (result) => {
         if (result.error) {

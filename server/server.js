@@ -792,9 +792,12 @@ io.on("connection", async (socket) => {
     return;
   });
 
-  socket.on("delete user", async function (id) {
-    if (id != null && socket.sessionID && socket.company) {
-      const deleteUserData = await mealsRequest.deleteUser(socket.company.id, id);
+  socket.on("delete user", async function (data) {
+    if (data.id != null && socket.sessionID && socket.company) {
+      if (data.date) {
+
+      }
+      const deleteUserData = await mealsRequest.deleteUser(socket.company.id, data.id);
       if (deleteUserData && deleteUserData.alert) {
         createAlert(socket, deleteUserData.alert.title, deleteUserData.alert.error);
       }
