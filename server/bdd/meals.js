@@ -23,7 +23,7 @@ module.exports = class MealsRequest {
               canGuest: row.k_Can_guest,
               isStaff: row.k_Is_staff,
               order: row.k_Number,
-              endDate: row.k_End_date,
+              dateEnd: row.k_End_date,
             });
           });
         }
@@ -115,7 +115,7 @@ module.exports = class MealsRequest {
     });
   }
 
-  async deleteKindMeal(companyId, endDate, id) {
+  async deleteKindMeal(companyId, dateEnd, id) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -126,7 +126,7 @@ module.exports = class MealsRequest {
         SET End_date = ?
         WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [endDate, id, companyId], (result) => {
+      await this.connectionMysql.sql(query, [dateEnd, id, companyId], (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -212,6 +212,33 @@ module.exports = class MealsRequest {
           info.alert = {
             title: 'Erreur',
             error: `Une erreur est survenue lors de la modification de : ${user.firstname} ${user.lastname}`
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async updateUserStatus(companyId, id, isActive) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        UPDATE Users
+        SET Is_active = ?
+        WHERE Id = ? AND Id_company = ?;
+      `;
+      await this.connectionMysql.sql(query, [isActive, id, companyId], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression"
           };
         }
         if (result.rows) {
@@ -391,6 +418,33 @@ module.exports = class MealsRequest {
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la modification de la configuration de repas"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async updateUserEventEntriesDates(ids, dateEnd) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        UPDATE User_event_entries
+        SET Date_end = ?
+        WHERE Id IN (?);
+      `;
+      await this.connectionMysql.sql(query, [dateEnd, ids], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la modification des changements de l'évènement utilisateur"
           };
         }
         if (result.rows) {
@@ -591,7 +645,34 @@ module.exports = class MealsRequest {
     });
   }
 
-  async deleteGuest(idGuest) {
+  async updateGuestEntriesDates(ids, dateEnd) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        UPDATE Guest_entries
+        SET Date_end = ?
+        WHERE Id IN (?);
+      `;
+      await this.connectionMysql.sql(query, [dateEnd, ids], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la modification des changements des invités"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async deleteGuests(ids) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -599,11 +680,10 @@ module.exports = class MealsRequest {
       };
       const query = `
         DELETE FROM Guests
-        WHERE Id = ?;
+        WHERE Id IN (?);
       `;
-      await this.connectionMysql.sql(query, [idGuest], (result) => {
+      await this.connectionMysql.sql(query, [ids], (result) => {
         if (result.error) {
-          console.log(result.error);
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la supression de l'invité"
@@ -767,7 +847,7 @@ module.exports = class MealsRequest {
     });
   }
 
-  async deleteUserEvent(id) {
+  async deleteUserEvents(ids) {
     return new Promise(async (resolve) => {
       const info = {
         alert: null,
@@ -775,13 +855,13 @@ module.exports = class MealsRequest {
       };
       const query = `
         DELETE FROM User_events
-        WHERE Id = ?;
+        WHERE Id IN (?);
       `;
-      await this.connectionMysql.sql(query, [id], (result) => {
+      await this.connectionMysql.sql(query, [ids], (result) => {
         if (result.error) {
           info.alert = {
             title: 'Erreur',
-            error: "Une erreur est survenue lors de la supression de l'évènement utilisateur"
+            error: "Une erreur est survenue lors de la supression des évènements utilisateur"
           };
         }
         if (result.rows) {
@@ -839,6 +919,32 @@ module.exports = class MealsRequest {
           info.alert = {
             title: 'Erreur',
             error: "Une erreur est survenue lors de la supression de l'évènement utilisateur"
+          };
+        }
+        if (result.rows) {
+          info.value = true;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async deleteUserEventEntriesFromIds(ids) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const query = `
+        DELETE FROM User_event_entries
+        WHERE Id IN (?);
+      `;
+      await this.connectionMysql.sql(query, [ids], (result) => {
+        if (result.error) {
+          console.log(result.error);
+          info.alert = {
+            title: 'Erreur',
+            error: "Une erreur est survenue lors de la supression des changements de l'évènement utilisateur"
           };
         }
         if (result.rows) {

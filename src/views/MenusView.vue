@@ -140,7 +140,7 @@ export default {
         this.values.afternoon.dessert = "";
       }
     },
-    processXLSX(object, startDate) {
+    processXLSX(object, dateStart) {
       const returnObj = [
         { midday: '', afternoon: '' },
         { midday: '', afternoon: '' },
@@ -150,7 +150,7 @@ export default {
         { midday: '', afternoon: '' },
         { midday: '', afternoon: '' }
       ];
-      var date = startDate;
+      var date = dateStart;
       for (let index = 0; index < 7; index++) {
         const letter = String.fromCharCode(66 + index * 2);
         returnObj[index].date = date.format('YYYY-MM-DD');
@@ -251,10 +251,10 @@ export default {
         preConfirm: () => {
           const values = {
             file: document.getElementById("import-file").value,
-            startDate: document.getElementById("start-file-date").value
+            dateStart: document.getElementById("start-file-date").value
           };
 
-          if (!values.startDate) {
+          if (!values.dateStart) {
             Swal.showValidationMessage(`Vous devez renseigner une date de début pour le fichier.`)
           }
           if (!values.file) {
@@ -265,15 +265,15 @@ export default {
         },
       }).then((data) => {
         if (data.isConfirmed) {
-          const startDate = moment(data.value.startDate, 'YYYY-MM-DD');
+          const dateStart = moment(data.value.dateStart, 'YYYY-MM-DD');
           const files = document.getElementById("import-file").files;
           const fileReader = new FileReader();
 
           fileReader.onload = e => {
             var wb = read(e.target.result);
-            socket.emit("add menus from file", { data: this.processXLSX(wb.Sheets[Object.keys(wb.Sheets)[0]], startDate) });
+            socket.emit("add menus from file", { data: this.processXLSX(wb.Sheets[Object.keys(wb.Sheets)[0]], dateStart) });
           };
-          if (fileReader && files[0] && startDate) {
+          if (fileReader && files[0] && dateStart) {
             fileReader.readAsArrayBuffer(files[0]);
           }
         }

@@ -133,7 +133,7 @@ export default {
     <section class="general-input" :class="{ staff: isStaffMealView }" @mouseout="dataHoverMealId = null">
         <div class="meals-header">
             <div class="user-header">
-                <input type="text" v-model="userSearch" placeholder="Rechercher par nom..." />
+                <input type="text" class="btn-input-search" v-model="userSearch" placeholder="Rechercher par nom..." />
             </div>
             <div class="column-header"
                 :class="{ 'with-tray': kd.deliveryId && !isStaffMealView, 'hover-meal': dataHoverMealId === kd.id }"

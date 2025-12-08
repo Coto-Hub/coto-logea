@@ -3,8 +3,6 @@ import ExportPageComponent from "@/components/ExportPage.vue";
 import { state } from "@/socket";
 import moment from "moment";
 import util from '@/util';
-import { jsPDF } from "jspdf";
-import html2canvas from 'html2canvas';
 
 export default {
   components: {
@@ -15,154 +13,305 @@ export default {
   data() {
     return {
       date: null,
+      period: null,
     }
   },
   mounted() {
-    this.date = moment(this.$route.params.date, 'DD-MM-YYYY');
+    this.period = this.$route.params.period;
+    this.date = (this.period == 'months') ? moment(`01-${this.$route.params.date}`, 'DD-MM-YYYY') : moment(this.$route.params.date, 'DD-MM-YYYY');
   },
   methods: {
     getTableData(isStaff) {
       const kindMeals = util.getAllKindMeal(isStaff);
 
+      if (!this.date || !kindMeals) return { kindMeals: [], rows: [] };
       const filteredKindMeals = [];
       const rowsList = [];
-      util.getAllUserWithData(isStaff, this.date).forEach((user) => {
-        if (user.id == null) {
-          user.guests.forEach(g => {
-            if (g.values) {
-              const obj = {
-                id: null,
-                userLabel: g.label,
+      const listDates = [moment(this.date)];
+      if (this.period == 'months') {
+        const daysInMonth = this.date.daysInMonth();
+        for (let d = 2; d <= daysInMonth; d++) {
+          listDates.push(moment(`${d}-${this.date.format('MM-YYYY')}`, 'DD-MM-YYYY'));
+        }
+      }
+
+      listDates.forEach((currentDate) => {
+        util.getAllUserWithData(isStaff, currentDate).forEach((user) => {
+          if (user.id == null) {
+            user.guests.forEach(g => {
+              if (g.values) {
+                const obj = {
+                  id: null,
+                  userLabel: g.label,
+                  mealsList: [],
+                  guestMealsList: [],
+                  eatingArea: {
+                    midday: null,
+                    evening: null,
+                  },
+                  delivery: {
+                    midday: { value: 0, isEvent: false },
+                    evening: { value: 0, isEvent: false },
+                  }
+                };
+                kindMeals.forEach((kd) => {
+                  const guestMeal = g.values.find(v => v.id == kd.id);
+                  if (guestMeal && kd.canGuest) {
+                    obj.guestMealsList.push({
+                      id: kd.id,
+                      value: guestMeal.meal ? g.nbGuests : 0,
+                    });
+                  }
+                });
+                rowsList.push(obj);
+              }
+            });
+          }
+          else {
+            if (!rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`)) {
+              rowsList.push({
+                id: user.id,
+                userLabel: `${user.lastname} ${user.firstname}`,
                 mealsList: [],
                 guestMealsList: [],
                 eatingArea: {
-                  midday: null,
-                  evening: null,
+                  midday: user.eatingArea,
+                  evening: user.eatingArea,
                 },
                 delivery: {
                   midday: { value: 0, isEvent: false },
                   evening: { value: 0, isEvent: false },
-                }
-              };
-              kindMeals.forEach((kd) => {
-                const guestMeal = g.values.find(v => v.id == kd.id);
-                if (guestMeal && kd.canGuest) {
-                  obj.guestMealsList.push({
-                    id: kd.id,
-                    value: guestMeal.meal ? g.nbGuests : 0,
-                  });
-                }
+                },
+                eating: {
+                  midday: false,
+                  evening: false,
+                },
               });
-              rowsList.push(obj);
             }
-          });
-        }
-        else {
-          if (!rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`)) {
-            rowsList.push({
-              id: user.id,
-              userLabel: `${user.lastname} ${user.firstname}`,
-              mealsList: [],
-              guestMealsList: [],
-              eatingArea: {
-                midday: user.eatingArea,
-                evening: user.eatingArea,
-              },
-              delivery: {
-                midday: { value: 0, isEvent: false },
-                evening: { value: 0, isEvent: false },
-              },
-              eating: {
-                midday: false,
-                evening: false,
-              },
-            });
-          }
-          const current = rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`);
-          if (current) {
-            kindMeals.forEach((kd) => {
-              const userMeal = user.values ? user.values.find(v => v.id == kd.id) : null;
-              if (userMeal) {
-                const meal = current.mealsList.find(m => m.id == kd.id);
-                if (!meal) {
-                  current.mealsList.push({
-                    id: kd.id,
-                    value: userMeal.meal ? 1 : 0,
-                    isEvent: userMeal.isMealEvent || false,
-                  });
-                } else {
-                  if (userMeal.meal) {
-                    meal.value += 1;
-                  }
-                  meal.isEvent = meal.isEvent || userMeal.isMealEvent;
-                }
-                if ([1, 2].includes(kd.deliveryId)) {
-                  if (kd.deliveryId == 1) {
-                    current.delivery.midday.value += userMeal.delivery ? 1 : 0;
-                    if (userMeal.isDeliveryEvent) {
-                      current.delivery.midday.isEvent = true;
+            const current = rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`);
+            if (current) {
+              kindMeals.forEach((kd) => {
+                const userMeal = user.values ? user.values.find(v => v.id == kd.id) : null;
+                if (userMeal) {
+                  const meal = current.mealsList.find(m => m.id == kd.id);
+                  if (!meal) {
+                    current.mealsList.push({
+                      id: kd.id,
+                      value: userMeal.meal ? 1 : 0,
+                      isEvent: userMeal.isMealEvent || false,
+                    });
+                  } else {
+                    if (userMeal.meal) {
+                      meal.value += 1;
                     }
-                  } else if (kd.deliveryId == 2) {
-                    current.delivery.evening.value += userMeal.delivery ? 1 : 0;
-                    if (userMeal.isDeliveryEvent) {
-                      current.delivery.evening.isEvent = true;
-                    }
+                    meal.isEvent = meal.isEvent || userMeal.isMealEvent;
                   }
-                }
-                if (!filteredKindMeals.find(kdF => kdF.id == kd.id)) {
-                  filteredKindMeals.push({
-                    id: kd.id,
-                    label: kd.label,
-                    abbreviation: kd.abbreviation,
-                    deliveryId: kd.deliveryId,
-                    canGuest: kd.canGuest,
-                    order: kd.order,
-                  });
-                }
-              }
-              if (kd.canGuest) {
-                if (user.guests && user.guests.length) {
-                  user.guests.forEach((g) => {
-                    const meal = current.guestMealsList.find(m => m.id == kd.id);
-                    const guestMeal = g.values.find(v => v.id == kd.id);
-                    if (!meal) {
-                      current.guestMealsList.push({
-                        id: kd.id,
-                        value: guestMeal && guestMeal.meal ? g.nbGuests : 0,
-                      });
-                    } else {
-                      if (guestMeal && guestMeal.meal) {
-                        meal.value += g.nbGuests;
+                  if ([1, 2].includes(kd.deliveryId)) {
+                    if (kd.deliveryId == 1) {
+                      current.delivery.midday.value += userMeal.delivery ? 1 : 0;
+                      if (userMeal.isDeliveryEvent) {
+                        current.delivery.midday.isEvent = true;
+                      }
+                    } else if (kd.deliveryId == 2) {
+                      current.delivery.evening.value += userMeal.delivery ? 1 : 0;
+                      if (userMeal.isDeliveryEvent) {
+                        current.delivery.evening.isEvent = true;
                       }
                     }
-                  });
-                }
-                else if (!isStaff) {
-                  const meal = current.guestMealsList.find(m => m.id == kd.id);
-                  if (!meal) {
-                    current.guestMealsList.push({
+                  }
+                  if (!filteredKindMeals.find(kdF => kdF.id == kd.id)) {
+                    filteredKindMeals.push({
                       id: kd.id,
-                      value: 0,
+                      label: kd.label,
+                      abbreviation: kd.abbreviation,
+                      deliveryId: kd.deliveryId,
+                      canGuest: kd.canGuest,
+                      order: kd.order,
                     });
                   }
                 }
+                if (kd.canGuest) {
+                  if (user.guests && user.guests.length) {
+                    user.guests.forEach((g) => {
+                      const meal = current.guestMealsList.find(m => m.id == kd.id);
+                      const guestMeal = g.values.find(v => v.id == kd.id);
+                      if (!meal) {
+                        current.guestMealsList.push({
+                          id: kd.id,
+                          value: guestMeal && guestMeal.meal ? g.nbGuests : 0,
+                        });
+                      } else {
+                        if (guestMeal && guestMeal.meal) {
+                          meal.value += g.nbGuests;
+                        }
+                      }
+                    });
+                  }
+                  else if (!isStaff) {
+                    const meal = current.guestMealsList.find(m => m.id == kd.id);
+                    if (!meal) {
+                      current.guestMealsList.push({
+                        id: kd.id,
+                        value: 0,
+                      });
+                    }
+                  }
+                }
+              });
+              if (current.delivery.midday.value > 0) {
+                current.eatingArea.midday = "Étage";
               }
-            });
-            if (current.delivery.midday.value > 0) {
-              current.eatingArea.midday = "Étage";
-            }
-            if (current.delivery.evening.value > 0) {
-              current.eatingArea.evening = "Étage";
-            }
-            if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 1))) {
-              current.eating.midday = true;
-            }
-            if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 2))) {
-              current.eating.evening = true;
+              if (current.delivery.evening.value > 0) {
+                current.eatingArea.evening = "Étage";
+              }
+              if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 1))) {
+                current.eating.midday = true;
+              }
+              if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 2))) {
+                current.eating.evening = true;
+              }
             }
           }
-        }
+        });
       });
+
+      // util.getAllUserWithData(isStaff, this.date).forEach((user) => {
+      //   if (user.id == null) {
+      //     user.guests.forEach(g => {
+      //       if (g.values) {
+      //         const obj = {
+      //           id: null,
+      //           userLabel: g.label,
+      //           mealsList: [],
+      //           guestMealsList: [],
+      //           eatingArea: {
+      //             midday: null,
+      //             evening: null,
+      //           },
+      //           delivery: {
+      //             midday: { value: 0, isEvent: false },
+      //             evening: { value: 0, isEvent: false },
+      //           }
+      //         };
+      //         kindMeals.forEach((kd) => {
+      //           const guestMeal = g.values.find(v => v.id == kd.id);
+      //           if (guestMeal && kd.canGuest) {
+      //             obj.guestMealsList.push({
+      //               id: kd.id,
+      //               value: guestMeal.meal ? g.nbGuests : 0,
+      //             });
+      //           }
+      //         });
+      //         rowsList.push(obj);
+      //       }
+      //     });
+      //   }
+      //   else {
+      //     if (!rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`)) {
+      //       rowsList.push({
+      //         id: user.id,
+      //         userLabel: `${user.lastname} ${user.firstname}`,
+      //         mealsList: [],
+      //         guestMealsList: [],
+      //         eatingArea: {
+      //           midday: user.eatingArea,
+      //           evening: user.eatingArea,
+      //         },
+      //         delivery: {
+      //           midday: { value: 0, isEvent: false },
+      //           evening: { value: 0, isEvent: false },
+      //         },
+      //         eating: {
+      //           midday: false,
+      //           evening: false,
+      //         },
+      //       });
+      //     }
+      //     const current = rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`);
+      //     if (current) {
+      //       kindMeals.forEach((kd) => {
+      //         const userMeal = user.values ? user.values.find(v => v.id == kd.id) : null;
+      //         if (userMeal) {
+      //           const meal = current.mealsList.find(m => m.id == kd.id);
+      //           if (!meal) {
+      //             current.mealsList.push({
+      //               id: kd.id,
+      //               value: userMeal.meal ? 1 : 0,
+      //               isEvent: userMeal.isMealEvent || false,
+      //             });
+      //           } else {
+      //             if (userMeal.meal) {
+      //               meal.value += 1;
+      //             }
+      //             meal.isEvent = meal.isEvent || userMeal.isMealEvent;
+      //           }
+      //           if ([1, 2].includes(kd.deliveryId)) {
+      //             if (kd.deliveryId == 1) {
+      //               current.delivery.midday.value += userMeal.delivery ? 1 : 0;
+      //               if (userMeal.isDeliveryEvent) {
+      //                 current.delivery.midday.isEvent = true;
+      //               }
+      //             } else if (kd.deliveryId == 2) {
+      //               current.delivery.evening.value += userMeal.delivery ? 1 : 0;
+      //               if (userMeal.isDeliveryEvent) {
+      //                 current.delivery.evening.isEvent = true;
+      //               }
+      //             }
+      //           }
+      //           if (!filteredKindMeals.find(kdF => kdF.id == kd.id)) {
+      //             filteredKindMeals.push({
+      //               id: kd.id,
+      //               label: kd.label,
+      //               abbreviation: kd.abbreviation,
+      //               deliveryId: kd.deliveryId,
+      //               canGuest: kd.canGuest,
+      //               order: kd.order,
+      //             });
+      //           }
+      //         }
+      //         if (kd.canGuest) {
+      //           if (user.guests && user.guests.length) {
+      //             user.guests.forEach((g) => {
+      //               const meal = current.guestMealsList.find(m => m.id == kd.id);
+      //               const guestMeal = g.values.find(v => v.id == kd.id);
+      //               if (!meal) {
+      //                 current.guestMealsList.push({
+      //                   id: kd.id,
+      //                   value: guestMeal && guestMeal.meal ? g.nbGuests : 0,
+      //                 });
+      //               } else {
+      //                 if (guestMeal && guestMeal.meal) {
+      //                   meal.value += g.nbGuests;
+      //                 }
+      //               }
+      //             });
+      //           }
+      //           else if (!isStaff) {
+      //             const meal = current.guestMealsList.find(m => m.id == kd.id);
+      //             if (!meal) {
+      //               current.guestMealsList.push({
+      //                 id: kd.id,
+      //                 value: 0,
+      //               });
+      //             }
+      //           }
+      //         }
+      //       });
+      //       if (current.delivery.midday.value > 0) {
+      //         current.eatingArea.midday = "Étage";
+      //       }
+      //       if (current.delivery.evening.value > 0) {
+      //         current.eatingArea.evening = "Étage";
+      //       }
+      //       if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 1))) {
+      //         current.eating.midday = true;
+      //       }
+      //       if (current.mealsList.find(m => m.value > 0 && kindMeals.find(kd => kd.id == m.id && kd.deliveryId == 2))) {
+      //         current.eating.evening = true;
+      //       }
+      //     }
+      //   }
+      // });
 
       return {
         kindMeals: isStaff ? kindMeals : filteredKindMeals.sort((a, b) => a.order - b.order),
@@ -171,46 +320,12 @@ export default {
     },
     printExport() {
       window.print();
-      // const doc = new jsPDF();
-      // document.querySelectorAll('.export-page-component').forEach((component, index) => {
-      //   console.log('Exporting component:', component, 'Index:', index);
-      //   html2canvas(component, {
-      //     // allowTaint: true,
-      //     logging: true,
-      //     profile: true,
-      //     useCORS: true,
-      //     scale: 30,
-      //   }).then(canvas => {
-      //     const imgData = canvas.toDataURL('image/jpeg');
-      //     const imgProps = doc.getImageProperties(imgData);
-      //     const pdfWidth = doc.internal.pageSize.getWidth();
-      //     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      //     if (index > 0) {
-      //       doc.addPage();
-      //     }
-      //     doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      //   });
-      // });
-      // setTimeout(() => {
-      //   doc.save(`planning-${this.$route.params.date}.pdf`);
-      // }, 3000);
-      // html2canvas(document.querySelector("#planning-export"), {
-      //   allowTaint: true,
-      //   logging: true,
-      //   profile: true,
-      //   useCORS: true,
-      //   scale: 4,
-      // }).then(canvas => {
-      //   var a = document.createElement('a');
-      //   a.href = canvas.toDataURL();
-      //   a.download = `planning-${this.month}.jpg`;
-      //   a.click();
-      // });
     },
   },
   computed: {
     getCurrentDay() {
-      return moment(this.$route.params.date, 'DD-MM-YYYY').format('dddd DD MMMM');
+      if (!this.date) return '';
+      return (this.period == 'months') ? `mois de ${this.date.format('MMMM')}` : this.date.format('dddd DD MMMM');
     }
   }
 }
@@ -220,8 +335,8 @@ export default {
   <main class="export-meals-view">
     <h1 @click="printExport">Export du {{ getCurrentDay }}</h1>
     <div class="container export-container">
-      <ExportPageComponent :isStaff="false" :date="$route.params.date" :tableData="getTableData(false)" />
-      <ExportPageComponent :isStaff="true" :date="$route.params.date" :tableData="getTableData(true)" />
+      <ExportPageComponent :isStaff="false" :period="period" :date="date" :tableData="getTableData(false)" />
+      <ExportPageComponent :isStaff="true" :period="period" :date="date" :tableData="getTableData(true)" />
     </div>
   </main>
 </template>

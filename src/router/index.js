@@ -38,10 +38,18 @@ const router = createRouter({
     },
     {
       path: '/menus/:id/today',
-      name: 'today',
-      component: () => import('../views/TodayView.vue'),
+      name: 'today-meal',
+      component: () => import('../views/TodayMealView.vue'),
       meta: {
-        title: 'Menus du jour',
+        title: 'Menu du jour',
+      },
+    },
+    {
+      path: '/plannings/:id/today',
+      name: 'today-planning',
+      component: () => import('../views/TodayPlanningView.vue'),
+      meta: {
+        title: 'Planning du jour',
       },
     },
     {
@@ -68,7 +76,7 @@ router.beforeEach((to, from) => {
 
 router.afterEach(async (to) => {
   let sessionObjEncrypt = localStorage.getItem("sessionObj");
-  const publicPages = ['/', '/menus/:id/today'];
+  const publicPages = ['/', '/menus/:id/today', '/plannings/:id/today'];
   const authRequired = !publicPages.includes((to.matched && to.matched[0]) ? to.matched[0].path : to.path);
 
   if (authRequired && !sessionObjEncrypt) {

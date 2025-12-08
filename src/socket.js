@@ -58,6 +58,11 @@ if (regexMeals.test(window.location.pathname)) {
     const id = window.location.pathname.replace('/menus/', '').replace('/today', '');
     socket.emit("init display menu", { id });
 }
+let regexPlannings = /\/plannings\/[0-9]+\/today/i;
+if (regexPlannings.test(window.location.pathname)) {
+    const id = window.location.pathname.replace('/plannings/', '').replace('/today', '');
+    socket.emit("init display planning", { id });
+}
 
 socket.on("company info", ({ company }) => {
     state.company = company;
@@ -86,6 +91,11 @@ socket.on("plannings info", ({ allPlannings }) => {
     if (planningList) {
         planningList.dispatchEvent(new Event("update"));
     }
+});
+
+socket.on("planning info", ({ planning, decorations }) => {
+    state.plannings = planning;
+    state.decorations = decorations;
 });
 
 socket.on("reccurences info", ({ allReccurences }) => {

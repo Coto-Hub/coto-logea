@@ -72,6 +72,18 @@ io.on("connection", async (socket) => {
     return;
   });
 
+  socket.on("init display planning", async function ({ id }) {
+    if (id && socket.sessionID) {
+      const planning = await planningsRequest.getPlanningCompany(id);
+      const decorations = await planningsRequest.getDecorationsPlanningCompany(id);
+      if (planning && planning.value && decorations) {
+        socket.join(`company:${id}`);
+        socket.emit("planning info", { planning: planning.value, decorations: decorations });
+      }
+    }
+    return;
+  });
+
   socket.on("get menus", async function ({ id }) {
     if (id && socket.sessionID && socket.company) {
       const allMenus = await menusRequest.getAllMenusByCompany(id);
@@ -623,6 +635,19 @@ io.on("connection", async (socket) => {
     return;
   });
 
+  socket.on("edit user status", async function ({ id, isActive }) {
+    if (id && socket.sessionID && socket.company) {
+      const updateUserData = await mealsRequest.updateUserStatus(socket.company.id, id, isActive);
+
+      if (updateUserData && updateUserData.alert) {
+        createAlert(socket, updateUserData.alert.title, updateUserData.alert.error);
+      }
+
+      emitAllUsers(socket.company.id);
+    }
+    return;
+  });
+
   socket.on("edit kind meal", async function (data) {
     if (data && socket.sessionID && socket.company) {
       const updateKindMealData = await mealsRequest.updateKindMeal(socket.company.id, data);
@@ -794,15 +819,41 @@ io.on("connection", async (socket) => {
 
   socket.on("delete user", async function (data) {
     if (data.id != null && socket.sessionID && socket.company) {
-      if (data.date) {
-
+      if (data.eventsEntries) {
+        if (data.eventsEntries.deleted && data.eventsEntries.deleted.length) {
+          if (data.eventsEntries.deleted.find(e => e.elementId != null)) {
+            await mealsRequest.deleteUserEventEntriesFromIds(data.eventsEntries.deleted.filter(e => e.elementId != null).map(e => e.elementId));
+          }
+          if (data.eventsEntries.deleted.find(e => e.elementId == null)) {
+            await mealsRequest.deleteUserEvents(data.eventsEntries.deleted.filter(e => e.elementId == null).map(e => e.id));
+          }
+        }
+        if (data.eventsEntries.edited && data.eventsEntries.edited.length) {
+          await mealsRequest.updateUserEventEntriesDates(data.eventsEntries.edited.map(e => e.elementId), data.eventsEntries.date);
+        }
       }
-      const deleteUserData = await mealsRequest.deleteUser(socket.company.id, data.id);
+      if (data.guestEntries) {
+        if (data.guestEntries.deleted && data.guestEntries.deleted.length) {
+          if (data.guestEntries.deleted.find(e => e.elementId != null)) {
+            await mealsRequest.deleteGuestEntriesFromIds(data.guestEntries.deleted.filter(e => e.elementId != null).map(e => e.elementId));
+          }
+          if (data.guestEntries.deleted.find(e => e.elementId == null)) {
+            await mealsRequest.deleteGuests(data.guestEntries.deleted.filter(e => e.elementId == null).map(e => e.id));
+          }
+        }
+        if (data.guestEntries.edited && data.guestEntries.edited.length) {
+          await mealsRequest.updateGuestEntriesDates(data.guestEntries.edited.map(e => e.elementId), data.guestEntries.date);
+        }
+      }
+      const deleteUserData = await mealsRequest.updateUserStatus(socket.company.id, data.id, 0);
       if (deleteUserData && deleteUserData.alert) {
         createAlert(socket, deleteUserData.alert.title, deleteUserData.alert.error);
       }
       else {
         emitAllUsers(socket.company.id);
+        emitAllUserEvents(socket.company.id);
+        emitAllUserMealConfigs(socket.company.id);
+        emitAllGuests(socket.company.id);
       }
     }
     return;
@@ -841,7 +892,7 @@ io.on("connection", async (socket) => {
   socket.on("delete user event meal", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
       await mealsRequest.deleteUserEventEntries(id);
-      const removeUserEventConfigData = await mealsRequest.deleteUserEvent(id);
+      const removeUserEventConfigData = await mealsRequest.deleteUserEvents([id]);
       if (removeUserEventConfigData && removeUserEventConfigData.alert) {
         createAlert(socket, removeUserEventConfigData.alert.title, removeUserEventConfigData.alert.error);
       }
@@ -868,7 +919,7 @@ io.on("connection", async (socket) => {
   socket.on("delete guest", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
       await mealsRequest.deleteGuestEntries(id);
-      const removeGuestData = await mealsRequest.deleteGuest(id);
+      const removeGuestData = await mealsRequest.deleteGuests([id]);
       if (removeGuestData && removeGuestData.alert) {
         createAlert(socket, removeGuestData.alert.title, removeGuestData.alert.error);
       }

@@ -496,13 +496,14 @@ export default {
                             <td v-for="planningDay in week">
                                 <div class="day-print" :class="{
                                     'justify-start': planningDay.startDeco && Array.isArray(planningDay.content),
-                                    'justify-end': planningDay.endDeco && Array.isArray(planningDay.content),
-                                    'justify-center': (!planningDay.startDeco && !planningDay.endDeco) || !Array.isArray(planningDay.content),
+                                    'justify-end': planningDay.endDeco && Array.isArray(planningDay.content) && planningDay.content.length > 2,
+                                    'justify-center': (!planningDay.startDeco && !planningDay.endDeco) || !Array.isArray(planningDay.content) || (planningDay.content.length <= 2),
+                                    'space-y-4': Array.isArray(planningDay.content) && planningDay.content.length <= 2
                                 }">
                                     <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
                                     <div class="decoration-container justify-center"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
-                                        v-if="planningDay.startDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 4) || !Array.isArray(planningDay.content))">
+                                        v-if="planningDay.startDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 5) || !Array.isArray(planningDay.content))">
                                         <img :src="getBase64Img(planningDay.startDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>
@@ -520,7 +521,7 @@ export default {
                                     <div class="decoration-container"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
                                         :class="`${!Array.isArray(planningDay.content) ? 'justify-center' : 'justify-end px-6'}`"
-                                        v-if="planningDay.endDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 4) || !Array.isArray(planningDay.content))">
+                                        v-if="planningDay.endDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 5) || !Array.isArray(planningDay.content))">
                                         <img :src="getBase64Img(planningDay.endDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>

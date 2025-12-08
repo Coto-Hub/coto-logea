@@ -151,6 +151,60 @@ module.exports = class PlanningsRequest {
     });
   }
 
+  async getPlanningCompany(id) {
+    return new Promise(async (resolve) => {
+      const info = {
+        alert: null,
+        value: null,
+      };
+      const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
+      const query = `
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content'
+        FROM Plannings p WHERE p.Id_company = ? AND DATE(p.Date_Hour) = ?;
+      `;
+      await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
+        if (result.rows && result.rows.length) {
+          const plannings = [];
+          result.rows.map((row) => {
+            plannings.push({
+              id: row.p_Id,
+              animationId: row.p_Id_animation,
+              dateTime: row.p_Date_Hour,
+              content: row.p_Content
+            });
+          });
+          info.value = plannings;
+        }
+        resolve(info);
+      });
+    });
+  }
+
+  async getDecorationsPlanningCompany(id) {
+    return new Promise(async (resolve) => {
+      const Decorations = [];
+      const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
+      const query = `
+        SELECT d.Id AS 'd_Id', d.Date AS 'd_Date', d.Id_icon AS 'd_Id_icon', d.Type AS 'd_Type', i.path AS 'i_Path', i.Label AS 'i_Label'
+        FROM Decorations d, Icons i WHERE d.Id_icon = i.Id AND d.Id_company = ? AND DATE(d.Date) = ?;
+      `;
+      await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
+        if (result.rows && result.rows.length) {
+          result.rows.map((row) => {
+            Decorations.push({
+              id: row.d_Id,
+              date: row.d_Date,
+              placementChoice: row.d_Type,
+              path: row.i_Path,
+              label: row.i_Label,
+            });
+          });
+        }
+        resolve(Decorations);
+      });
+    });
+  }
+
   async getAllMonthConfigByCompany(id) {
     return new Promise(async (resolve) => {
       const MonthConfigs = [];

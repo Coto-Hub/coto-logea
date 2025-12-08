@@ -1292,6 +1292,16 @@ main {
   }
 }
 
+
+.btn-input-search {
+  @apply flex rounded-xl border-[3px] border-white bg-white/30 px-2 py-1.5 text-base font-medium;
+  @apply mx-auto shadow-sm placeholder-neutral-800/80;
+
+  &:focus {
+    @apply outline-none;
+  }
+}
+
 .checkbox {
   @apply border-4 border-gray-300/70 bg-gray-300/30 w-2/3;
 
@@ -1655,6 +1665,10 @@ main {
           @apply bg-yellow-200/80;
         }
       }
+
+      .loading {
+        @apply flex flex-col w-full h-full justify-center items-center space-y-3 font-semibold;
+      }
     }
   }
 }
@@ -1941,7 +1955,7 @@ main {
       }
 
       .user-header {
-        @apply w-64;
+        @apply flex items-center w-64;
       }
 
       .column-header {

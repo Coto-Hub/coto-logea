@@ -31,7 +31,7 @@ export function joursFeriesFrance(annee) {
     ];
 }
 export function getAllKindMeal(isStaff, date) {
-    return state.kindMeals.filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(date))) && (isStaff ? kd.isStaff : true));
+    return state.kindMeals.filter(kd => (!kd.dateEnd || moment(kd.dateEnd).isAfter(moment(date))) && (isStaff ? kd.isStaff : true));
 }
 export function getAllUser(isStaff) {
     return state.users.filter(u => u.isStaff == isStaff).sort((a, b) => {
@@ -52,8 +52,25 @@ export function getEventsForDate(userId, date) {
 export function getGuestsForDate(userId, date) {
     return state.guests.filter(g => g.userId == userId && g.elements.find(el => moment.utc(date, "DD-MM-YYYY").isBetween(el.dateStart, el.dateEnd, 'day', '[]'))).sort((a, b) => moment(a.created).diff(moment(b.created)));
 }
+export function getFilteredUsers(isStaff) {
+    return state.users.filter(u => {
+        if (u.isStaff != isStaff) return false;
+        if (!u.isActive) {
+            return state.userMealConfigs.find(c => {
+                if (c.userId != u.id) return false;
+                if (c.dateEnd == null || moment().isBetween(moment.utc(c.dateStart), moment.utc(c.dateEnd), 'day', '[]')) return true;
+                return false;
+            });
+        }
+        return true;
+    }).sort((a, b) => {
+        if (a.lastname < b.lastname) return -1;
+        if (a.lastname > b.lastname) return 1;
+        return a.civility - b.civility;
+    })
+}
 export function getAllUserWithData(isStaff, date) {
-    if (!moment.isMoment(date)) {
+    if (!moment.isMoment(date) || !state.userEvents.length) {
         return [];
     }
     const allUser = [...getAllUser(isStaff), { id: null }].map(user => {
@@ -88,9 +105,12 @@ export function getAllUserWithData(isStaff, date) {
                         };
                     }
                     else {
+                        const nbMeal = [conf.monday, conf.tuesday, conf.wednesday, conf.thursday, conf.friday, conf.saturday, conf.sunday].reduce((a, b) => a + b, 0);
+
                         returnValue = {
                             meal: conf[moment(date).locale('en').format('dddd').toLowerCase()] || false,
                             delivery: (conf[moment(date).locale('en').format('dddd').toLowerCase()] && conf.delivery) || false,
+                            isMealEvent: conf[moment(date).locale('en').format('dddd').toLowerCase()] != (nbMeal > 3 ? true : false),
                         };
                     }
                 }
@@ -200,6 +220,7 @@ export default {
     getConfigForDate,
     getEventsForDate,
     getGuestsForDate,
+    getFilteredUsers,
     getAllUserWithData,
-    equationDePaques
+    equationDePaques,
 };

@@ -40,6 +40,12 @@ export default {
         check: false,
         input: '',
       },
+      historyFilterData: {
+        search: '',
+        filter: 'all',
+        dateStart: null,
+        dateEnd: null
+      },
       isStaffMealView: false,
     }
   },
@@ -91,21 +97,7 @@ export default {
       });
     },
     usersModal(isStaff) {
-      const userlist = state.users.filter(u => {
-        if (u.isStaff != isStaff) return false;
-        if (!u.isActive) {
-          return state.userMealConfigs.find(c => {
-            if (c.userId != u.id) return false;
-            if (c.dateEnd == null || moment().isBetween(moment.utc(c.dateStart), moment.utc(c.dateEnd), 'day', '[]')) return true;
-            return false;
-          });
-        }
-        return true;
-      }).sort((a, b) => {
-        if (a.lastname < b.lastname) return -1;
-        if (a.lastname > b.lastname) return 1;
-        return a.civility - b.civility;
-      }).map((user) => {
+      const userlist = util.getFilteredUsers(isStaff).map((user) => {
         const nbConfig = state.userMealConfigs.filter(c => c.userId == user.id).length;
         return `
           <li class="list-item${isStaff ? ' staff-item' : ''}" data-configs="${nbConfig}" data-id="${user.id}">
@@ -351,7 +343,7 @@ export default {
     },
     mealsModal() {
       const today = moment().set('hour', 0).set('minute', 0).set('second', 0);
-      const meallist = state.kindMeals.filter(a => !a.endDate || moment(a.endDate).isAfter(today)).map((a) => `
+      const meallist = state.kindMeals.filter(a => !a.dateEnd || moment(a.dateEnd).isAfter(today)).map((a) => `
         <li data-id="${a.id}">
           <p>${a.label}</p>
           <div class="inputs">
@@ -396,7 +388,7 @@ export default {
             this.addMealModal();
           });
           document.getElementById('update-meal-list').addEventListener('update', () => {
-            document.getElementById('update-meal-list').innerHTML = state.kindMeals.filter(a => !a.endDate || moment(a.endDate).isAfter(today)).map((a) => `
+            document.getElementById('update-meal-list').innerHTML = state.kindMeals.filter(a => !a.dateEnd || moment(a.dateEnd).isAfter(today)).map((a) => `
         <li data-id="${a.id}">
           <p>${a.label}</p>
           <div class="inputs">
@@ -482,7 +474,7 @@ export default {
         title: `${isStaff ? 'Personnel : ' : 'Résident : '} ${user.civility} ${user.lastname} `,
         html: `
         <div class="show-user-modal-container modal-container">
-              ${configWithoutEndDate || configList.length == 0 ? `<div class="trash-user-btn" id="trash-user-btn">${this.trashIcon}</div>` : ``}
+              <div class="trash-user-btn ${configWithoutEndDate || configList.length == 0 ? '' : 'hidden'}" id="trash-user-btn">${this.trashIcon}</div>
               <div class="edit-user-btn" id="edit-user-btn">${this.editIcon}</div>
               <h2>Configuration des repas</h2>
               <div class="user-config-list-container">
@@ -525,14 +517,24 @@ export default {
             }
           });
           document.getElementById("update-user-meal-configs").addEventListener('update', () => {
-            document.getElementById("update-user-meal-configs").innerHTML = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart).diff(a.dateStart)).map((c) => {
+            const configList = state.userMealConfigs.filter(c => c.userId == user.id).sort((a, b) => moment(b.dateStart).diff(a.dateStart)).map((c) => {
               return `
         <li class="list-item" data-id="${c.id}">
           <p>${c.dateEnd ? 'Du ' + moment(c.dateStart).format('DD/MM/YYYY') + ' au ' + moment(c.dateEnd).format('DD/MM/YYYY') : 'Depuis le ' + moment(c.dateStart).format('DD/MM/YYYY')}
           </p>
-                  </li>
+          </li>
         `;
             }).join('');
+            const configWithoutEndDate = state.userMealConfigs.find(c => c.userId == user.id && c.dateEnd == null);
+            if (document.getElementById("trash-user-btn")) {
+              if (configWithoutEndDate || configList.length == 0) {
+                document.getElementById("trash-user-btn").classList.remove('hidden');
+              }
+              else {
+                document.getElementById("trash-user-btn").classList.add('hidden');
+              }
+            }
+            document.getElementById("update-user-meal-configs").innerHTML = configList ? configList : '<p class="empty-list">Aucune configuration trouvée</p>';
           });
         },
       }).then((data) => {
@@ -829,9 +831,69 @@ export default {
             data.value.configId = configList.sort((a, b) => moment(b.dateStart).diff(a.dateStart))[0].id;
             socket.emit('edit user meal config end', data.value);
           }
-          // Disable all user events after the end date TODO
-          socket.emit('delete user', { id: user.id, date: data.value.date });
-          this.usersModal(isStaff);
+          const date = moment.utc(data.value.date);
+          const eventsEntries = {
+            edited: [],
+            deleted: [],
+            date: date.format('YYYY-MM-DD'),
+          };
+          state.userEvents.filter(e => e.userId == user.id).filter(ev => ev.elements.find(e => date.isBefore(moment.utc(e.dateEnd), 'day'))).forEach(ev => {
+            ev.elements.forEach(el => {
+              if (date.isBefore(moment.utc(el.dateStart), 'day')) {
+                eventsEntries.deleted.push({
+                  eventId: ev.id,
+                  elementId: el.id,
+                });
+              }
+              else if (date.isSameOrAfter(moment.utc(el.dateStart), 'day') && date.isBefore(moment.utc(el.dateEnd), 'day')) {
+                eventsEntries.edited.push({
+                  eventId: ev.id,
+                  elementId: el.id,
+                });
+              }
+            });
+            if (ev.elements.filter(el => eventsEntries.deleted.find(de => de.elementId == el.id)).length == ev.elements.length) {
+              eventsEntries.deleted.push({
+                eventId: ev.id,
+                elementId: null,
+              });
+            }
+          });
+          const guestEntries = {
+            edited: [],
+            deleted: [],
+            date: date.format('YYYY-MM-DD'),
+          };
+          state.guests.filter(e => e.userId == user.id).filter(ev => ev.elements.find(e => date.isBefore(moment.utc(e.dateEnd), 'day'))).forEach(ev => {
+            ev.elements.forEach(el => {
+              if (date.isBefore(moment.utc(el.dateStart), 'day')) {
+                guestEntries.deleted.push({
+                  guestId: ev.id,
+                  elementId: el.id,
+                });
+              }
+              else if (date.isSameOrAfter(moment.utc(el.dateStart), 'day') && date.isBefore(moment.utc(el.dateEnd), 'day')) {
+                guestEntries.edited.push({
+                  guestId: ev.id,
+                  elementId: el.id,
+                });
+              }
+            });
+            if (ev.elements.filter(el => guestEntries.deleted.find(de => de.elementId == el.id)).length == ev.elements.length) {
+              guestEntries.deleted.push({
+                guestId: ev.id,
+                elementId: null,
+              });
+            }
+          });
+
+          socket.emit('delete user', {
+            id: user.id,
+            date: data.value.date,
+            eventsEntries,
+            guestEntries,
+          });
+          this.showUserModal(isStaff, user.id);
         }
         else {
           this.showUserModal(isStaff, user.id);
@@ -1146,8 +1208,16 @@ export default {
       const user = state.users.find(u => u.id == userId && u.isStaff == isStaff);
       const configList = state.userMealConfigs.filter(c => c.userId == userId).sort((a, b) => moment(b.dateStart).diff(a.dateStart));
       const config = configList.length > 0 ? configList[0] : null;
+      let minDate = null;
 
-      const mealList = state.kindMeals.filter(kd => kd.isStaff == isStaff || !isStaff).filter(kd => (!kd.endDate || moment(kd.endDate).isAfter(moment(this.date))) && (isStaff ? kd.isStaff : true)).map((kd) => {
+      if (!user.isActive) {
+        minDate = config ? moment(config.dateEnd).add(2, 'days').format('YYYY-MM-DD') : null;
+      }
+      else {
+        minDate = config ? moment(config.dateStart).add(1, 'days').format('YYYY-MM-DD') : null;
+      }
+
+      const mealList = state.kindMeals.filter(kd => kd.isStaff == isStaff || !isStaff).filter(kd => (!kd.dateEnd || moment(kd.dateEnd).isAfter(moment(this.date))) && (isStaff ? kd.isStaff : true)).map((kd) => {
         const current = config ? config.elements.find(e => e.idKindMeal == kd.id) : null;
 
         return `<tr data-id="${kd.id}" data-meal="${current ? true : false}" data-delivery="${current && current.delivery ? true : false}" data-config="{'monday':${!current || current.monday},'tuesday':${!current || current.tuesday},'wednesday':${!current || current.wednesday},'thursday':${!current || current.thursday},'friday':${!current || current.friday},'saturday':${!current || current.saturday},'sunday':${!current || current.sunday}}" data-holiday="${current && current.publicHoliday ? true : false}">
@@ -1211,7 +1281,7 @@ export default {
               </table>
               <div class="date-container">
                 <label for="input-date-start">Date de début</label>
-                <input type="date" id="input-date-start" class="btn-input" placeholder="Date de début" />
+                <input type="date" id="input-date-start" class="btn-input" min="${minDate}" placeholder="Date de début" />
               </div>
             </div> `,
         confirmButtonText: 'Enregistrer',
@@ -1352,6 +1422,9 @@ export default {
           data.value.userId = userId;
           data.value.dateEnd = null;
           data.value.previousConfig = null;
+          if (!user.isActive) {
+            socket.emit('edit user status', { id: user.id, isActive: 1 });
+          }
           if (configList.length > 0) {
             const previousConfig = configList.find(c => moment(c.dateStart).isBefore(moment(data.value.dateStart)));
 
@@ -1383,7 +1456,9 @@ export default {
         .sort((a, b) => moment(b.dateStart).diff(a.dateStart));
 
       const previousConfig = configList.length > 0 ? configList.find(c => moment(config.dateStart).add(-1, 'days').isSame(moment(c.dateEnd))) : null;
+      const beforeConfig = configList.length > 0 ? configList.find(c => moment(c.dateStart).isBefore(moment(config.dateStart))) : null;
       const nextConfig = configList.length > 0 ? configList.find(c => moment(config.dateEnd).add(1, 'days').isSame(moment(c.dateStart))) : null;
+
       const mealList = state.kindMeals.filter(kd => !isStaff || kd.isStaff == isStaff).map((kd) => {
         const current = config.elements.find(e => e.idKindMeal == kd.id);
 
@@ -1450,7 +1525,10 @@ export default {
           <div class="content-input">
             <div class="date-container">
               <h2>Date de début</h2>
-              <input type="date" id="input-date-start" ${previousConfig ? `min="${moment(previousConfig.dateStart).add(1, 'day').format('YYYY-MM-DD') ?? ''}"` : ""} value="${moment(config.dateStart).format('YYYY-MM-DD') ?? ''}" ${config.dateEnd ? `max="${moment(config.dateEnd).format('YYYY-MM-DD') ?? ''}"` : ""} value="${moment(config.dateStart).format('YYYY-MM-DD') ?? ''}" class="btn-input" />
+              <input type="date" id="input-date-start" 
+              ${previousConfig ? `min="${moment(previousConfig.dateStart).add(1, 'day').format('YYYY-MM-DD') ?? ''}"` : beforeConfig ? `min="${moment(beforeConfig.dateEnd).add(2, 'day').format('YYYY-MM-DD') ?? ''}"` : ""}
+              ${config.dateEnd ? `max="${moment(config.dateEnd).format('YYYY-MM-DD') ?? ''}"` : ""} 
+              value="${moment(config.dateStart).format('YYYY-MM-DD') ?? ''}" class="btn-input" />
             </div>
             ${config.dateEnd ? (nextConfig ? `
             <div class="date-container">
@@ -1697,6 +1775,9 @@ export default {
                 dateEnd: config.dateEnd ? moment(config.dateEnd).format('YYYY-MM-DD') : null,
               };
             }
+            else {
+              socket.emit('edit user status', { id: user.id, isActive: 0 });
+            }
           }
           socket.emit('delete user meal config', values);
           this.showUserModal(user.isStaff, user.id);
@@ -1722,11 +1803,7 @@ export default {
       this.stringDate = this.formatDate(this.date);
     },
     addGuestModal(userId, label, dateStart, dateEnd, nbGuests, isStaff = false) {
-      const userlist = state.users.filter(u => u.isStaff == false).sort((a, b) => {
-        if (a.lastname < b.lastname) return -1;
-        if (a.lastname > b.lastname) return 1;
-        return a.id - b.id;
-      }).filter(u => {
+      const userlist = util.getFilteredUsers(false).filter(u => {
         const usr = state.users.filter(u2 => `${u2.lastname} ${u2.firstname}` == `${u.lastname} ${u.firstname}`);
         return usr.length == 1 || (usr.length > 1 && usr[usr.length - 1].id == u.id);
       }).map((user) => {
@@ -1803,11 +1880,7 @@ export default {
         willOpen: () => {
           document.getElementById('update-users-list').addEventListener('update', () => {
             const list = document.getElementById('update-users-list');
-            list.innerHTML = state.users.filter(u => u.isStaff == false).sort((a, b) => {
-              if (a.lastname < b.lastname) return -1;
-              if (a.lastname > b.lastname) return 1;
-              return a.id - b.id;
-            }).filter(u => {
+            list.innerHTML = util.getFilteredUsers(false).filter(u => {
               const usr = state.users.filter(u2 => `${u2.lastname} ${u2.firstname}` == `${u.lastname} ${u.firstname}`);
               return usr.length == 1 || (usr.length > 1 && usr[usr.length - 1].id == u.id);
             }).map((user) => {
@@ -1854,12 +1927,12 @@ export default {
             }
           });
           document.getElementById('input-guest-date-start').addEventListener('change', (e) => {
-            const endDate = document.getElementById('input-guest-date-end');
+            const dateEnd = document.getElementById('input-guest-date-end');
             if (e.target.value) {
-              endDate.setAttribute('min', e.target.value);
+              dateEnd.setAttribute('min', e.target.value);
 
-              if (!endDate.value || moment(endDate.value).isBefore(e.target.value)) {
-                endDate.value = e.target.value;
+              if (!dateEnd.value || moment(dateEnd.value).isBefore(e.target.value)) {
+                dateEnd.value = e.target.value;
               }
 
               const nbDays = moment(document.getElementById('input-guest-date-end').value).diff(moment(e.target.value)) / (1000 * 60 * 60 * 24) + 1;
@@ -2249,7 +2322,7 @@ export default {
         // this.showUserModal(isStaff, userId);
       });
     },
-    editGuestConfigModal(guestId, searchValue, filterValue, startDateValue, endDateValue) {
+    editGuestConfigModal(guestId) {
       const guest = state.guests.find(g => g.id == guestId);
       if (!guest) return;
       const dates = {
@@ -2426,7 +2499,7 @@ export default {
           });
           document.getElementById('trash-user-btn').addEventListener('click', (e) => {
             Swal.clickDeny();
-            this.deleteGuestModal(guestId, searchValue, filterValue, startDateValue, endDateValue);
+            this.deleteGuestModal(guestId);
           });
         },
         preConfirm: () => {
@@ -2497,16 +2570,13 @@ export default {
           socket.emit('edit guest config', data.value);
         }
         if (!data.isDenied) {
-          this.showHistoryModal(searchValue, filterValue, startDateValue, endDateValue);
+          this.showHistoryModal();
         }
       });
     },
     addEventModal(userId, dateStart, dateEnd) {
-      const userlist = state.users.filter(u => u.isStaff == this.isStaffMealView).sort((a, b) => {
-        if (a.lastname < b.lastname) return -1;
-        if (a.lastname > b.lastname) return 1;
-        return a.civility - b.civility;
-      }).map((user) => {
+      // get Filtered User List
+      const userlist = util.getFilteredUsers(false).map((user) => {
         return `
           <li class="select-item" data-id="${user.id}">
             <p>${user.civility} <span class="filter">${user.lastname}</span></p>
@@ -2594,12 +2664,12 @@ export default {
             });
           });
           document.getElementById('input-guest-date-start').addEventListener('change', (e) => {
-            const endDate = document.getElementById('input-guest-date-end');
+            const dateEnd = document.getElementById('input-guest-date-end');
             if (e.target.value) {
-              endDate.setAttribute('min', e.target.value);
+              dateEnd.setAttribute('min', e.target.value);
 
-              if (!endDate.value || moment(endDate.value).isBefore(e.target.value)) {
-                endDate.value = e.target.value;
+              if (!dateEnd.value || moment(dateEnd.value).isBefore(e.target.value)) {
+                dateEnd.value = e.target.value;
               }
 
               const nbDays = moment(document.getElementById('input-guest-date-end').value).diff(moment(e.target.value)) / (1000 * 60 * 60 * 24) + 1;
@@ -2732,6 +2802,9 @@ export default {
               ${kd.label}
             </td>
             <td>
+              <div class="custom-checkbox ${Object.values(currentDaysConfigMeal).find(c => c == true) ? 'active' : ''}" data-type="meal"></div>
+            </td>
+            <td>
               <div class="btn-select" data-type="meal" data-nb="${Object.values(currentDaysConfigMeal).filter(c => c == true).length}" data-value="${JSON.stringify(currentDaysConfigMeal).replaceAll('"', "'")}">
                 <div class="select-label">
                   <p class="current-choice"></p>
@@ -2792,6 +2865,7 @@ export default {
                   <tr>
                     <th></th>
                     <th>Repas</th>
+                    ${configsByDate.length > 1 ? `<th>Jours actifs</th>` : ''}
                     <th>Plateau</th>
                   </tr>
                 </thead>
@@ -2828,10 +2902,11 @@ export default {
           else {
             document.getElementById('user-config-meal-list').addEventListener('click', (e) => {
               const tr = e.target.closest('tr');
-              const mealSelect = tr.querySelector('div[data-type="meal"]');
+              const mealSelect = tr.querySelector('div.btn-select[data-type="meal"]');
               const mealSelectValues = JSON.parse(mealSelect.dataset.value.replaceAll("'", '"') ?? '{}');
-              const deliverySelect = tr.querySelector('div[data-type="delivery"]');
+              const deliverySelect = tr.querySelector('div.btn-select[data-type="delivery"]');
               const deliverySelectValues = JSON.parse(deliverySelect.dataset.value.replaceAll("'", '"') ?? '{}');
+              const mealCheckbox = tr.querySelector('div.custom-checkbox[data-type="meal"]');
               if (e.target.closest('svg')) {
                 const select = e.target.closest('.btn-select');
                 const type = select.dataset.type;
@@ -2871,7 +2946,6 @@ export default {
                 const select = li.closest('.btn-select');
                 const current = JSON.parse(select.dataset.value.replaceAll("'", '"') ?? '{}');
                 if (select.dataset.type == "delivery") {
-                  const mealSelect = JSON.parse(tr.querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
                   if (mealSelect[li.dataset.choice] == false) {
                     return;
                   }
@@ -2896,12 +2970,11 @@ export default {
                   tr.dataset[select.dataset.type] = JSON.stringify(current);
                 }
               }
-              else if (e.target.closest('div.btn-select') && e.target.closest('div.btn-select').classList.contains('btn-select')) {
-                if ((e.target.closest('div.btn-select').dataset.type != "delivery") || (e.target.closest('tr').querySelector('div[data-type="meal"]') && (e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.nb != "0"))) {
-                  if (e.target.closest('div.btn-select').dataset.type == "delivery") {
-                    const mealSelect = JSON.parse(e.target.closest('tr').querySelector('div[data-type="meal"]').dataset.value.replaceAll("'", '"') ?? '{}');
-                    e.target.closest('div.btn-select').querySelectorAll('.choice').forEach((li) => {
-                      if (mealSelect[li.dataset.choice] == false) {
+              else if (e.target.closest('div.btn-select')) {
+                if ((e.target.closest('div.btn-select') != deliverySelect) || (mealSelect && (mealSelect.dataset.nb != "0"))) {
+                  if (e.target.closest('div.btn-select') == deliverySelect) {
+                    deliverySelect.querySelectorAll('.choice').forEach((li) => {
+                      if (mealSelectValues[li.dataset.choice] == false) {
                         li.classList.add('disabled');
                       }
                       else {
@@ -2912,6 +2985,39 @@ export default {
                   if (!e.target.closest('ul.select-list')) {
                     e.target.closest('div.btn-select').classList.toggle('active');
                   }
+                }
+              }
+              else if (e.target.closest('div.custom-checkbox') && !e.target.closest('div.custom-checkbox').classList.contains('disabled')) {
+                if (mealCheckbox.classList.contains('active')) {
+                  mealCheckbox.classList.remove('active');
+                  Object.keys(mealSelectValues).forEach((key) => {
+                    mealSelectValues[key] = false;
+                  });
+                  mealSelect.dataset.value = JSON.stringify(mealSelectValues);
+                  mealSelect.dataset.nb = 0;
+                  tr.dataset.meal = JSON.stringify(mealSelectValues);
+                  mealSelect.querySelectorAll('.choice').forEach((li) => {
+                    li.classList.remove('active');
+                  });
+
+                  Object.keys(deliverySelectValues).forEach((key) => {
+                    deliverySelectValues[key] = false;
+                    deliverySelect.querySelector(`li[data-choice="${key}"]`).classList.remove('active');
+                  });
+                  deliverySelect.dataset.value = JSON.stringify(deliverySelectValues);
+                }
+                else {
+                  mealCheckbox.classList.add('active');
+                  Object.keys(mealSelectValues).forEach((key) => {
+                    mealSelectValues[key] = true;
+                  });
+                  mealSelect.dataset.value = JSON.stringify(mealSelectValues);
+                  mealSelect.dataset.nb = Object.values(mealSelectValues).length;
+                  tr.dataset.meal = JSON.stringify(mealSelectValues);
+                  mealSelect.querySelectorAll('.choice').forEach((li) => {
+                    li.classList.add('active');
+                  });
+                  mealSelect.classList.add('active');
                 }
               }
               if (deliverySelect) {
@@ -2947,12 +3053,15 @@ export default {
                     break;
                 }
                 mealSelect.dataset.nb = nbElement;
+                mealCheckbox.classList.toggle('active', nbElement > 0);
               }
             });
             document.getElementById('click-container').addEventListener('click', (e) => {
               if (e.target.closest('ul.select-list')) return;
+              const clickItem = e.target.closest('div.custom-checkbox.active') ? e.target.closest('tr').querySelector('div.btn-select[data-type="meal"]') : e.target.closest('div.btn-select');
+
               document.querySelectorAll('div.btn-select').forEach((li) => {
-                if (li.classList.contains('active') && e.target.closest('div.btn-select') != li) {
+                if (li.classList.contains('active') && clickItem != li) {
                   li.classList.remove('active');
                 }
               });
@@ -3073,7 +3182,7 @@ export default {
         }
       });
     },
-    deleteEventModal(event, searchValue, filterValue, dateStart, dateEnd) {
+    deleteEventModal(event) {
       const user = state.users.find(u => u.id == event.userId);
       if (!user) return;
       Swal.mixin({
@@ -3113,10 +3222,10 @@ export default {
         if (data.isConfirmed) {
           socket.emit('delete user event meal', event.id);
         }
-        this.showHistoryModal(searchValue, filterValue, dateStart, dateEnd);
+        this.showHistoryModal();
       });
     },
-    deleteGuestModal(guestId, searchValue, filterValue, dateStart, dateEnd) {
+    deleteGuestModal(guestId) {
       const guest = state.guests.find(g => g.id == guestId);
       if (!guest) return;
       const userGuest = guest.userId != null ? state.users.find(u => u.id == guest.userId) : null;
@@ -3155,16 +3264,23 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
       }).then((data) => {
-        console.log(data);
         if (data.isConfirmed) {
           socket.emit('delete guest', guest.id);
         }
         setTimeout(() => {
-          this.showHistoryModal(searchValue, filterValue, dateStart, dateEnd);
+          this.showHistoryModal();
         }, 100);
       });
     },
-    showHistoryModal(searchValue = '', type = 'all', dateStart = null, dateEnd = null) {
+    showHistoryModal(resetData = false) {
+      if (resetData) {
+        this.historyFilterData = {
+          search: '',
+          filter: 'all',
+          dateStart: null,
+          dateEnd: null
+        };
+      }
       const eventlist = state.userEvents.map((event) => {
         const user = state.users.find(u => u.id == event.userId);
         const listDate = [];
@@ -3252,14 +3368,14 @@ export default {
         title: `Historique des modifications`,
         html: `
             <div class="history-modal-container modal-container">
-              <div class="triple-switch" data-value="${type}" id="history-switch">
+              <div class="triple-switch" data-value="${this.historyFilterData.filter}" id="history-switch">
                 <button class="btn-switch-choice" data-option="all">Tout</button>
                 <button class="btn-switch-choice" data-option="event">Événements</button>
                 <button class="btn-switch-choice" data-option="guest">Invités</button>
                 <span class="btn-element"></span>
               </div>
               <div class="default-list-container">
-                <input type="text" id="input-search-list" class="btn-input btn-search" value="${searchValue}" placeholder="Rechercher par nom" />
+                <input type="text" id="input-search-list" class="btn-input btn-search" value="${this.historyFilterData.search}" placeholder="Rechercher par nom" />
                 <ul class="default-list history-list update-user-events-list update-guests-list" id="update-user-guest-events-list">
                   ${sortedList.map(e => e.html).join('')}
                 </ul>
@@ -3268,11 +3384,11 @@ export default {
                 <h1>Période de recherche :</h1>
                 <div class="date-container">
                   <h2>Date de début</h2>
-                  <input type="date" id="input-search-date-start" max="${dateEnd ? moment(dateEnd).format('YYYY-MM-DD') : null}" value="${dateStart ? moment(dateStart).format('YYYY-MM-DD') : null}" class="btn-input">
+                  <input type="date" id="input-search-date-start" max="${this.historyFilterData.dateEnd ? moment(this.historyFilterData.dateEnd).format('YYYY-MM-DD') : null}" value="${this.historyFilterData.dateStart ? moment(this.historyFilterData.dateStart).format('YYYY-MM-DD') : null}" class="btn-input">
                 </div>
                 <div class="date-container">
                   <h2>Date de fin</h2>
-                  <input type="date" id="input-search-date-end" min="${dateStart ? moment(dateStart).format('YYYY-MM-DD') : null}" value="${dateEnd ? moment(dateEnd).format('YYYY-MM-DD') : null}" class="btn-input">
+                  <input type="date" id="input-search-date-end" min="${this.historyFilterData.dateStart ? moment(this.historyFilterData.dateStart).format('YYYY-MM-DD') : null}" value="${this.historyFilterData.dateEnd ? moment(this.historyFilterData.dateEnd).format('YYYY-MM-DD') : null}" class="btn-input">
                 </div>
               </div>
             </div>
@@ -3281,31 +3397,26 @@ export default {
         focusConfirm: false,
         showDenyButton: false,
         willOpen: () => {
-          function updateList() {
-            const switchValue = document.getElementById('history-switch').dataset.value;
-            const searchValue = document.getElementById('input-search-list').value.toLowerCase();
-            const startDateValue = document.getElementById('input-search-date-start').value;
-            const endDateValue = document.getElementById('input-search-date-end').value;
-
+          function updateList(historyFilterData) {
             document.getElementById('update-user-guest-events-list').querySelectorAll(':scope > li').forEach((li) => {
               const label = li.querySelector('.filter').textContent.toLowerCase();
               const type = li.dataset.type;
               let display = true;
 
-              if (switchValue != 'all' && type != switchValue) {
+              if (historyFilterData.filter != 'all' && type != historyFilterData.filter) {
                 display = false;
               }
 
-              if (label.indexOf(searchValue) == -1 && searchValue.length != 0) {
+              if (label.indexOf(historyFilterData.search) == -1 && historyFilterData.search.length != 0) {
                 display = false;
               }
 
               const eventDates = li.dataset.dates.split(',');
-              if (startDateValue && endDateValue) {
+              if (historyFilterData.dateStart && historyFilterData.dateEnd) {
                 let isInRange = false;
                 eventDates.forEach((d) => {
                   const mDate = moment(d, 'DD-MM-YYYY');
-                  if (mDate.isBetween(moment(startDateValue), moment(endDateValue), 'days', '[]')) {
+                  if (mDate.isBetween(moment(historyFilterData.dateStart), moment(historyFilterData.dateEnd), 'days', '[]')) {
                     isInRange = true;
                   }
                 });
@@ -3313,11 +3424,11 @@ export default {
                   display = false;
                 }
               }
-              else if (startDateValue) {
+              else if (historyFilterData.dateStart) {
                 let isInRange = false;
                 eventDates.forEach((d) => {
                   const mDate = moment(d, 'DD-MM-YYYY');
-                  if (mDate.isSameOrAfter(moment(startDateValue), 'days')) {
+                  if (mDate.isSameOrAfter(moment(historyFilterData.dateStart), 'days')) {
                     isInRange = true;
                   }
                 });
@@ -3325,11 +3436,11 @@ export default {
                   display = false;
                 }
               }
-              else if (endDateValue) {
+              else if (historyFilterData.dateEnd) {
                 let isInRange = false;
                 eventDates.forEach((d) => {
                   const mDate = moment(d, 'DD-MM-YYYY');
-                  if (mDate.isSameOrBefore(moment(endDateValue), 'days')) {
+                  if (mDate.isSameOrBefore(moment(historyFilterData.dateEnd), 'days')) {
                     isInRange = true;
                   }
                 });
@@ -3341,29 +3452,33 @@ export default {
               li.style.display = display ? 'flex' : 'none';
             });
           }
-          updateList();
+          function getCurrentConfig() {
+            return {
+              search: document.getElementById('input-search-list').value.toLowerCase(),
+              filter: document.getElementById('history-switch').dataset.value,
+              dateStart: document.getElementById('input-search-date-start').value,
+              dateEnd: document.getElementById('input-search-date-end').value,
+            };
+          }
+          updateList(this.historyFilterData);
 
           document.querySelectorAll('#history-switch .btn-switch-choice').forEach((btn) => {
-            if (btn.dataset.option == type) {
+            if (btn.dataset.option == this.historyFilterData.filter) {
               btn.classList.add('active');
             }
           });
           document.getElementById('update-user-guest-events-list').addEventListener('click', (e) => {
             if (e.target.closest('span.trash') || e.target.closest('span.edit')) {
-              const searchValue = document.getElementById('input-search-list').value.toLowerCase();
-              const filterValue = document.getElementById('history-switch').dataset.value;
-              const startDateValue = document.getElementById('input-search-date-start').value;
-              const endDateValue = document.getElementById('input-search-date-end').value;
               const type = e.target.closest('li[data-id]').dataset.type;
               const eventId = e.target.closest('li[data-id]').dataset.id;
               if (e.target.closest('span').classList.contains('trash') && type == 'event') {
                 const event = state.userEvents.find(ev => ev.id == eventId);
                 Swal.close();
-                this.deleteEventModal(event, searchValue, filterValue, startDateValue, endDateValue);
+                this.deleteEventModal(event);
               }
               else if (e.target.closest('span').classList.contains('edit') && type == 'guest') {
                 Swal.close();
-                this.editGuestConfigModal(eventId, searchValue, filterValue, startDateValue, endDateValue);
+                this.editGuestConfigModal(eventId);
               }
               return;
             }
@@ -3457,20 +3572,24 @@ export default {
             });
             const newSortedList = ([...newEventlist, ...newGuestlist]).sort((a, b) => moment(a.created).isBefore(moment(b.created)) ? 1 : -1);
             document.getElementById('update-user-guest-events-list').innerHTML = newSortedList.map((e) => e.html).join('');
-            updateList();
+            this.historyFilterData = getCurrentConfig();
+            updateList(this.historyFilterData);
           });
           document.getElementById('input-search-list').addEventListener('input', (e) => {
-            updateList();
+            this.historyFilterData = getCurrentConfig();
+            updateList(this.historyFilterData);
           });
           document.getElementById('input-search-date-start').addEventListener('change', (e) => {
             const dateStart = e.target.value;
             document.getElementById('input-search-date-end').setAttribute('min', dateStart);
-            updateList();
+            this.historyFilterData = getCurrentConfig();
+            updateList(this.historyFilterData);
           });
           document.getElementById('input-search-date-end').addEventListener('change', (e) => {
             const dateEnd = e.target.value;
             document.getElementById('input-search-date-start').setAttribute('max', dateEnd);
-            updateList();
+            this.historyFilterData = getCurrentConfig();
+            updateList(this.historyFilterData);
           });
           document.getElementById('history-switch').addEventListener('click', (e) => {
             if (e.target.closest('button') && e.target.closest('button').classList.contains('btn-switch-choice')) {
@@ -3479,14 +3598,14 @@ export default {
               });
               e.target.closest('button').classList.add('active');
               e.target.closest('#history-switch').dataset.value = e.target.closest('button').dataset.option;
-              updateList();
+              this.historyFilterData = getCurrentConfig();
+              updateList(this.historyFilterData);
             }
           });
         },
       });
     },
     openExportModal() {
-      const listWeeks = [];
       Swal.fire({
         title: 'Exporter',
         showCancelButton: false,
@@ -3570,15 +3689,14 @@ export default {
           });
           document.getElementById('export-btn-list').addEventListener('click', (e) => {
             if (e.target.closest('button') && e.target.closest('button').classList.contains('btn')) {
+              const dateData = e.target.closest('button').dataset.date;
               const periodValue = document.getElementById('period-switch').dataset.value;
-              const dateValue = e.target.closest('button').dataset.date;
+              const dateValue = (periodValue == 'months') ? dateData.replace('01-', '') : dateData;
 
               window.open(`/export-meals/${periodValue}/${dateValue}`, '_blank');
             }
           });
         },
-        // }).then((result) => {
-        //   document.getElementById('planning-wait').classList.remove('active');
       });
     },
     getUserConfigMeal(userId, kindMealId) {
@@ -3602,121 +3720,6 @@ export default {
     },
     getAllUserWithData() {
       return util.getAllUserWithData(this.isStaffMealView, this.date);
-      // const allUser = [...util.getAllUser(this.isStaffMealView), { id: null }].map(user => {
-      //   let values = null;
-      //   const config = util.getConfigForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-      //   const events = util.getEventsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-      //   const guests = util.getGuestsForDate(user.id, moment(this.date).format('DD-MM-YYYY'));
-
-      //   if (user.id !== null) {
-      //     if (!config || config.dateEnd && moment(config.dateEnd).isBefore(this.date)) {
-      //       return null;
-      //     }
-      //     values = util.getAllKindMeal(this.isStaffMealView, this.date).map((kd) => {
-      //       const dayEvents = [];
-      //       let returnValue = {};
-      //       events.forEach((ev) => {
-      //         ev.elements.forEach((el) => {
-      //           if (el.idKindMeal == kd.id && this.date.isBetween(moment(el.dateStart), moment(el.dateEnd), 'day', '[]')) {
-      //             dayEvents.push(el);
-      //           }
-      //         });
-      //       });
-
-      //       if (config && config.elements.find(el => el.idKindMeal == kd.id)) {
-      //         const conf = config.elements.find(el => el.idKindMeal == kd.id);
-
-      //         if (conf.publicHoliday == 0 && util.publicHolidayCheck(this.date)) {
-      //           returnValue = {
-      //             meal: false,
-      //             delivery: false,
-      //           };
-      //         }
-      //         else {
-      //           returnValue = {
-      //             meal: conf[moment(this.date).locale('en').format('dddd').toLowerCase()] || false,
-      //             delivery: (conf[moment(this.date).locale('en').format('dddd').toLowerCase()] && conf.delivery) || false,
-      //           };
-      //         }
-      //       }
-      //       else {
-      //         returnValue = {
-      //           meal: false,
-      //           delivery: false,
-      //         };
-      //       }
-      //       dayEvents.forEach((ev) => {
-      //         if (ev.isAbsence) {
-      //           returnValue = {
-      //             meal: false,
-      //             delivery: false,
-      //           };
-      //         }
-      //         else {
-      //           returnValue = {
-      //             meal: true,
-      //             delivery: ev.delivery ? true : false,
-      //           };
-      //         }
-      //       });
-      //       return {
-      //         id: kd.id,
-      //         canDelivery: kd.canDelivery,
-      //         ...returnValue,
-      //       };
-      //     });
-      //   }
-      //   const guestsValues = guests.filter(g => g.isStaff == this.isStaffMealView).map(g => {
-      //     let dateStart = null;
-      //     let dateEnd = null;
-      //     const gValues = util.getAllKindMeal(this.isStaffMealView, this.date).map((kd) => {
-      //       let returnValue = {};
-      //       const element = g.elements ? g.elements.find(el => el.idKindMeal == kd.id && moment(el.dateStart).format("YYYY-MM-DD") <= this.date.format("YYYY-MM-DD") && moment(el.dateEnd).format("YYYY-MM-DD") >= this.date.format("YYYY-MM-DD")) : null;
-      //       if (element) {
-      //         returnValue = {
-      //           meal: true,
-      //           delivery: element.delivery || false
-      //         };
-      //         if (!dateStart || (moment(element.dateStart).isBefore(dateStart))) {
-      //           dateStart = moment(element.dateStart).format('DD/MM/YYYY');
-      //         }
-      //         if (!dateEnd || (moment(element.dateEnd).isAfter(dateEnd))) {
-      //           dateEnd = moment(element.dateEnd).format('DD/MM/YYYY');
-      //         }
-      //       }
-      //       else {
-      //         returnValue = {
-      //           meal: false,
-      //           delivery: false,
-      //         };
-      //       }
-      //       return {
-      //         id: kd.id,
-      //         canDelivery: kd.canDelivery,
-      //         ...returnValue,
-      //       };
-      //     });
-      //     return {
-      //       id: g.id,
-      //       nbGuests: g.nbGuests,
-      //       label: g.label,
-      //       info: g.info,
-      //       values: gValues,
-      //       dateStart: dateStart,
-      //       dateEnd: dateEnd
-      //     };
-      //   });
-      //   if (user.id == null && !guestsValues.length) {
-      //     return null;
-      //   }
-
-      //   return {
-      //     ...user,
-      //     values,
-      //     guests: guestsValues,
-      //   };
-      // }).filter(u => u != null);
-      // return allUser;
     },
     getDayDate() {
       return moment(this.date).format('dddd D MMMM YYYY');
@@ -3765,7 +3768,7 @@ export default {
         </button>
       </div>
       <div class="btn-right-container">
-        <button class="btn" @click="showHistoryModal()">Historique</button>
+        <button class="btn" @click="showHistoryModal(true)">Historique</button>
       </div>
     </div>
   </div>

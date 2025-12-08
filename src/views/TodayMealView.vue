@@ -80,7 +80,7 @@ export default {
   },
   emits: [],
   mounted() {
-    socket.on("menu info", () => {
+    socket.on("menu info", ({ menu }) => {
       this.resetFormData();
     });
   },

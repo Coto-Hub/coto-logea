@@ -1457,10 +1457,10 @@ export default {
     openPrint() {
       const listWeeks = [];
       this.weeks.map(w => {
-        const startDate = moment(w[0].date).set('hour', 0).set('minute', 0).set('second', 0).format('YYYY-MM-DD HH:mm:ss');
+        const dateStart = moment(w[0].date).set('hour', 0).set('minute', 0).set('second', 0).format('YYYY-MM-DD HH:mm:ss');
         const weekNumber = moment(w[0].date).week();
         listWeeks.push(`
-                <button type="button" data-first-day="${startDate}" class="btn btn-default">Semaine ${weekNumber}</button>
+                <button type="button" data-first-day="${dateStart}" class="btn btn-default">Semaine ${weekNumber}</button>
         `);
       })
       Swal.fire({
@@ -1490,9 +1490,9 @@ export default {
           });
           document.getElementById('export-week').addEventListener('click', (e) => {
             if (e.target.closest('button')) {
-              const startDate = e.target.closest('button').dataset.firstDay;
-              if (startDate) {
-                this.printWeek.startDate = startDate;
+              const dateStart = e.target.closest('button').dataset.firstDay;
+              if (dateStart) {
+                this.printWeek.dateStart = dateStart;
                 Swal.close();
                 this.togglePrintWeek();
               }
@@ -1574,7 +1574,7 @@ export default {
       return this.printWeek.isActive;
     },
     getPrintWeekStartDate() {
-      return moment(this.printWeek.startDate).set('hour', 0).set('minute', 0).set('second', 0).format('YYYY-MM-DD HH:mm:ss');
+      return moment(this.printWeek.dateStart).set('hour', 0).set('minute', 0).set('second', 0).format('YYYY-MM-DD HH:mm:ss');
     },
     getMonths() {
       return months;
@@ -1703,7 +1703,7 @@ export default {
       <PlanningMonth v-if="printMonth" :weeks="weeks" :monthString="months[date.month]"
         :month="`${date.month}-${date.year}`" @customiseImgModal="customiseImgModal"
         @closePlanning="togglePrintMonth" />
-      <PlanningWeek v-if="printWeek.isActive" :startDate="getPrintWeekStartDate" @closePlanningWeek="togglePrintWeek"
+      <PlanningWeek v-if="printWeek.isActive" :dateStart="getPrintWeekStartDate" @closePlanningWeek="togglePrintWeek"
         @customiseImgModal="customiseImgModal" />
     </div>
     <ImgEdit v-if="editImg.isActive" :img="editImg.img" @closeImgEdit="editImg.callbackClose()"

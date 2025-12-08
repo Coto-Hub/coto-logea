@@ -7,7 +7,7 @@ export default {
     components: {
     },
     props: {
-        startDate: {
+        dateStart: {
             type: String,
             required: true
         },
@@ -62,7 +62,7 @@ export default {
     },
     methods: {
         saveConfig() {
-            const config = state.week_configs.find(c => c.week == `${moment(this.startDate).week()}-${moment(this.startDate).year()}`);
+            const config = state.week_configs.find(c => c.week == `${moment(this.dateStart).week()}-${moment(this.dateStart).year()}`);
             if (config) {
                 socket.emit('edit week config', {
                     id: config.id,
@@ -71,7 +71,7 @@ export default {
                 });
             } else {
                 socket.emit('add week config', {
-                    week: `${moment(this.startDate).week()}-${moment(this.startDate).year()}`,
+                    week: `${moment(this.dateStart).week()}-${moment(this.dateStart).year()}`,
                     text: this.choice.text,
                     background: this.choice.background,
                 });
@@ -88,7 +88,7 @@ export default {
             }).then(canvas => {
                 var a = document.createElement('a');
                 a.href = canvas.toDataURL();
-                a.download = `planning-semaine-${moment(this.startDate).week()}.jpg`;
+                a.download = `planning-semaine-${moment(this.dateStart).week()}.jpg`;
                 a.click();
             });
         },
@@ -105,7 +105,7 @@ export default {
             return moment(date).date();
         },
         reloadConfig() {
-            const config = state.week_configs.find(c => c.week == `${moment(this.startDate).week()}-${moment(this.startDate).year()}`);
+            const config = state.week_configs.find(c => c.week == `${moment(this.dateStart).week()}-${moment(this.dateStart).year()}`);
             if (config) {
                 this.choice.text = config.text;
                 this.choice.background = config.background;
@@ -123,21 +123,21 @@ export default {
             return this.currentChoice ? this.colors[this.currentChoice] : [];
         },
         configIsSave() {
-            const config = state.week_configs.find(c => c.week == `${moment(this.startDate).week()}-${moment(this.startDate).year()}`);
+            const config = state.week_configs.find(c => c.week == `${moment(this.dateStart).week()}-${moment(this.dateStart).year()}`);
             return config && (config.text == this.choice.text && config.background == this.choice.background);
         },
         getStartDate() {
-            return moment(this.startDate);
+            return moment(this.dateStart);
         },
         getEndDate() {
-            return moment(this.startDate).add(6, 'd');
+            return moment(this.dateStart).add(6, 'd');
         },
         getWeek() {
-            const startDate = moment(this.startDate);
+            const dateStart = moment(this.dateStart);
             const week = [];
             for (let i = 0; i < 7; i++) {
                 let isCustom = false;
-                const currentDate = startDate.clone().add(i, 'd');
+                const currentDate = dateStart.clone().add(i, 'd');
                 const elements = state.plannings.filter((planning) => moment(planning.dateTime).isSame(currentDate, 'day')).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)).map(
                     (planning) => {
                         if (planning.animationId == null) {
