@@ -172,6 +172,9 @@ export default {
                             <p>{{ kd.value ? kd.value : '' }}</p>
                         </td>
                     </template>
+                    <div class="infos" v-if="row.infos && row.infos.length">
+                        <p>{{row.infos.map(i => `${i.nb}: ${i.label}`).join(' ')}}</p>
+                    </div>
                 </tr>
                 <tr v-for="index in 4">
                     <td>

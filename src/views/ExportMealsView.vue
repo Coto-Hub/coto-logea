@@ -52,7 +52,8 @@ export default {
                   delivery: {
                     midday: { value: 0, isEvent: false },
                     evening: { value: 0, isEvent: false },
-                  }
+                  },
+                  infos: [],
                 };
                 kindMeals.forEach((kd) => {
                   const guestMeal = g.values.find(v => v.id == kd.id);
@@ -61,6 +62,16 @@ export default {
                       id: kd.id,
                       value: guestMeal.meal ? g.nbGuests : 0,
                     });
+                    if (guestMeal.meal && g.info) {
+                      const label = `${g.info} (${kd.abbreviation})`;
+                      const currentInfo = obj.infos.find(i => i.label == label);
+                      if (currentInfo) {
+                        currentInfo.nb += g.nbGuests;
+                      }
+                      else {
+                        obj.infos.push({ label: label, nb: g.nbGuests });
+                      }
+                    }
                   }
                 });
                 rowsList.push(obj);
@@ -86,6 +97,7 @@ export default {
                   midday: false,
                   evening: false,
                 },
+                infos: [],
               });
             }
             const current = rowsList.find(r => r.userLabel == `${user.lastname} ${user.firstname}`);
@@ -143,6 +155,16 @@ export default {
                       } else {
                         if (guestMeal && guestMeal.meal) {
                           meal.value += g.nbGuests;
+                        }
+                      }
+                      if (guestMeal && guestMeal.meal && g.info) {
+                        const label = `${g.info} (${kd.abbreviation})`;
+                        const currentInfo = current.infos.find(i => i.label == label);
+                        if (currentInfo) {
+                          currentInfo.nb += g.nbGuests;
+                        }
+                        else {
+                          current.infos.push({ label: label, nb: g.nbGuests });
                         }
                       }
                     });

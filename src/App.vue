@@ -1635,6 +1635,23 @@ main {
           }
         }
 
+        tr {
+          @apply relative;
+
+          .infos {
+            @apply inset-y-0 -right-3 absolute translate-x-full flex items-center justify-center max-w-[6vw];
+
+            p {
+              @apply border-y border-black/20;
+            }
+
+            &::before {
+              @apply absolute inset-y-[0.28rem] -left-3 w-2.5 bg-black/80 rounded-r-full;
+              content: '';
+            }
+          }
+        }
+
         tbody tr th,
         tbody tr td {
           min-width: 1.5vw;
