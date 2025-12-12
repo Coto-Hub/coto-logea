@@ -59,10 +59,8 @@
 </template>
 
 <script>
-import router from "../router";
-import Arrow from "../components/icons/IconArrow.vue"
+import Arrow from "../components/icons/IconFork.vue"
 import { socket, state } from "@/socket";
-import { read, utils } from 'xlsx';
 import moment from "moment";
 
 export default {
@@ -86,7 +84,7 @@ export default {
   },
   methods: {
     resetFormData() {
-      const currentMenu = state.menus.find(e => moment().isSame(e.date, 'day'));
+      const currentMenu = state.displayMenus.find(e => moment().isSame(e.date, 'day'));
       if (currentMenu) {
         this.midday.starter = currentMenu.midday.starter.replaceAll('\n', '<br />');
         this.midday.dish = currentMenu.midday.dish.replaceAll('\n', '<br />');
@@ -135,10 +133,14 @@ export default {
     @apply flex w-full justify-around h-[6rem] pb-4 relative items-center;
 
     svg {
-      @apply mx-auto fill-white/70 hidden w-1/4 px-4;
+      @apply mx-auto fill-white/70 hidden w-1/4 px-4 rotate-90;
 
       @screen md {
         @apply flex;
+      }
+
+      &.right {
+        @apply -scale-100;
       }
     }
 
@@ -219,9 +221,5 @@ export default {
   @screen md {
     @apply flex top-0 bottom-[2.5%] right-0 w-2 h-auto;
   }
-}
-
-.display .display-header .right {
-  @apply -scale-100;
 }
 </style>

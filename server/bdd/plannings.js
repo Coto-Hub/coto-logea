@@ -159,19 +159,33 @@ module.exports = class PlanningsRequest {
       };
       const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
       const query = `
-        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content'
-        FROM Plannings p WHERE p.Id_company = ? AND DATE(p.Date_Hour) = ?;
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path'
+        FROM Plannings p
+        LEFT JOIN Icons i ON i.Id_animation = p.Id_animation 
+        WHERE p.Id_company = ? AND DATE(p.Date_Hour) = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
         if (result.rows && result.rows.length) {
           const plannings = [];
           result.rows.map((row) => {
-            plannings.push({
-              id: row.p_Id,
-              animationId: row.p_Id_animation,
-              dateTime: row.p_Date_Hour,
-              content: row.p_Content
-            });
+            if (!plannings.find(p => p.id == row.p_Id)) {
+              plannings.push({
+                id: row.p_Id,
+                animationId: row.p_Id_animation,
+                dateTime: row.p_Date_Hour,
+                content: row.p_Content,
+                icons: [],
+              });
+            }
+            const planning = plannings.find(p => p.id == row.p_Id);
+            if (row.i_Id) {
+              planning.icons.push({
+                id: row.i_Id,
+                label: row.i_Label,
+                path: row.i_Path,
+              });
+            }
+
           });
           info.value = plannings;
         }
@@ -193,6 +207,7 @@ module.exports = class PlanningsRequest {
           result.rows.map((row) => {
             Decorations.push({
               id: row.d_Id,
+              iconId: row.d_Id_icon,
               date: row.d_Date,
               placementChoice: row.d_Type,
               path: row.i_Path,

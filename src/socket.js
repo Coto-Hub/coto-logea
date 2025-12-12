@@ -19,7 +19,10 @@ export const state = reactive({
     users: [],
     guests: [],
     userEvents: [],
-    joursFeries: {}
+    joursFeries: {},
+    displayPlannings: [],
+    displayDecorations: [],
+    displayMenus: [],
 });
 
 // const URL = `${import.meta.env.VITE_URL}`;
@@ -94,8 +97,8 @@ socket.on("plannings info", ({ allPlannings }) => {
 });
 
 socket.on("planning info", ({ planning, decorations }) => {
-    state.plannings = planning;
-    state.decorations = decorations;
+    state.displayPlannings = planning;
+    state.displayDecorations = decorations;
 });
 
 socket.on("reccurences info", ({ allReccurences }) => {
@@ -188,7 +191,7 @@ socket.on("menus info", ({ allMenus }) => {
 });
 
 socket.on("menu info", ({ menu }) => {
-    state.menus = [menu];
+    state.displayMenus = [menu];
 });
 
 socket.on("disconnect client", () => {
