@@ -125,8 +125,8 @@ export default {
   }
 
   .display {
-    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60;
-    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-4;
+    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60 w-[95vw] mx-auto;
+    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-[2vh];
 
     @screen md {
       @apply overflow-hidden;
@@ -188,10 +188,10 @@ export default {
 
     .display-row {
       @apply flex justify-center w-full items-center min-h-[14vh] border-8 border-rose-500/50 rounded-full relative;
-      @apply shadow-md space-x-4 bg-white/30 pl-[8.5rem] max-w-5xl;
+      @apply shadow-md space-x-4 bg-white/30 pl-[14.5vh] max-w-[50vw];
 
       &>p {
-        @apply w-full text-2xl font-medium pr-7;
+        @apply w-full text-2xl font-medium pr-[1.5vh];
 
         @screen xl {
           @apply text-5xl;

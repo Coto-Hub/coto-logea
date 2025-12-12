@@ -121,8 +121,8 @@ export default {
   }
 
   .display {
-    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60;
-    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-4;
+    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60 min-h-[90vh] justify-around;
+    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-[2vh];
 
     @screen md {
       @apply overflow-hidden;
@@ -133,7 +133,7 @@ export default {
     @apply flex w-full justify-around h-[6rem] pb-4 relative items-center;
 
     svg {
-      @apply mx-auto fill-white/70 hidden w-1/4 px-4 rotate-90;
+      @apply mx-auto fill-white/70 hidden w-1/5 px-4 rotate-90;
 
       @screen md {
         @apply flex;

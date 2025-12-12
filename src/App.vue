@@ -2004,25 +2004,25 @@ main {
       }
 
       .custom-checkbox {
-        @apply mx-auto border-[3px] bg-gray-200/20 w-6 h-6 rounded-md cursor-pointer relative;
-        @apply border-neutral-500/60;
+        @apply mx-auto border-[3px] w-6 h-6 rounded-md cursor-pointer relative;
+        @apply border-neutral-500/60 bg-gray-200/20;
 
         &:hover {
           @apply border-neutral-600/90;
         }
 
         &.active {
-          @apply border-neutral-600/80 bg-neutral-600/20;
+          @apply border-purple-800/60 bg-purple-800/20;
 
           &::after {
-            @apply bg-neutral-600/80;
+            @apply bg-purple-800/60;
           }
 
           &:hover {
-            @apply border-neutral-500/60;
+            @apply border-purple-600/60;
 
             &::after {
-              @apply bg-neutral-500;
+              @apply bg-purple-300;
             }
           }
         }

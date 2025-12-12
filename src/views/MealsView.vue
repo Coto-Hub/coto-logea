@@ -135,7 +135,7 @@ export default {
                 </ul>
               </div>
               <button type="button" id="add-user" class="btn btn-confirm">Ajouter</button>
-              <button type="button" id="old-users" class="btn btn-default">Acien ${isStaff ? 'personnels' : 'résidents'}</button>
+              <button type="button" id="old-users" class="btn btn-default">Ancien ${isStaff ? 'personnels' : 'résidents'}</button>
             </div>
         `,
         confirmButtonText: 'Fermer',
