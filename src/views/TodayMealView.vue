@@ -121,8 +121,8 @@ export default {
   }
 
   .display {
-    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60 min-h-[90vh] justify-around;
-    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-[2vh];
+    @apply border-[10px] border-solid border-white/80 rounded-[2rem] bg-white/60 min-h-[60vh] justify-around;
+    @apply shadow-xl shadow-gray-400/30 overflow-x-hidden overflow-y-scroll flex flex-col py-[3vh];
 
     @screen md {
       @apply overflow-hidden;
@@ -130,10 +130,10 @@ export default {
   }
 
   .display-header {
-    @apply flex w-full justify-around h-[6rem] pb-4 relative items-center;
+    @apply flex w-full justify-around h-[10vh] pb-[7vh] relative items-center;
 
     svg {
-      @apply mx-auto fill-white/70 hidden w-1/5 px-4 rotate-90;
+      @apply mx-auto fill-white/70 hidden w-1/4 max-h-[27.5vh] px-4 rotate-90;
 
       @screen md {
         @apply flex;
@@ -151,8 +151,8 @@ export default {
         @apply text-5xl w-auto pb-0 no-underline;
       }
 
-      @screen xl {
-        @apply text-7xl;
+      @screen 2xl {
+        @apply text-6xl;
       }
     }
   }
@@ -191,7 +191,7 @@ export default {
         @apply text-4xl;
       }
 
-      @screen xl {
+      @screen 2xl {
         @apply text-5xl;
       }
     }
@@ -199,7 +199,7 @@ export default {
     p {
       @apply w-full text-2xl font-medium;
 
-      @screen xl {
+      @screen 2xl {
         @apply text-4xl;
       }
     }
@@ -210,7 +210,7 @@ export default {
   @apply flex flex-col max-w-[50rem] h-[11rem] items-center mb-10 px-3;
 
   @screen md {
-    @apply h-[12rem];
+    @apply h-[17.5vh];
   }
 }
 
