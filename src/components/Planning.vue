@@ -150,7 +150,7 @@ export default {
                 <p>Intégrer les récurrences ?</p>
                 <div class="choice-container">
                     <button class="btn btn-cancel" @click="skipInit = true">Annuler</button>
-                    <button class="btn btn-confirm" @click="initReccurence">Confirmer</button>
+                    <button class="btn btn-confirm" @click="() => $emit('initReccurence')">Confirmer</button>
                 </div>
             </div>
         </div>

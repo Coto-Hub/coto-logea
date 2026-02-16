@@ -855,7 +855,7 @@ export default {
         const end = moment(lastDay).day(r.day).hour(r.time.split(':')[0]).minute(r.time.split(':')[1]);
         while (start.isBefore(end) || end.isSame(start)) {
           listAnimations.push({
-            dateTime: start.format('YYYY-MM-DD HH:mm:ss'),
+            dateTime: moment.utc(start).format('YYYY-MM-DD HH:mm:ss'),
             content: state.animations.find(a => a.id == r.animationId).label,
             iconId: state.animations.find(a => a.id == r.animationId).icons[Math.floor(Math.random() * state.animations.find(a => a.id == r.animationId).icons.length)],
             animationId: r.animationId,
@@ -1653,7 +1653,7 @@ export default {
     <PlanningComponent :loading="loadingPlanning" :weeks="weeks" @customiseImgModal="customiseImgModal"
       @customPlanningModal="customPlanningModal" @addAnimationPlanningModal="addAnimationPlanningModal"
       @editImgPlanningModal="editImgPlanningModal" @editPlanningModal="editPlanningModal"
-      @deleteCustomPlanningModal="deleteCustomPlanningModal" />
+      @deleteCustomPlanningModal="deleteCustomPlanningModal" @initReccurence="initReccurence" />
     <div class="general-form w-1/3 pt-1">
       <div class="general-form-date">
         <button class="date-btn" @click="updateMonth(-1)">
