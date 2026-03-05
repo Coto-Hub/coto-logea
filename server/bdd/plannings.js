@@ -132,7 +132,7 @@ module.exports = class PlanningsRequest {
     return new Promise(async (resolve) => {
       const Plannings = [];
       const query = `
-        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content'
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', p.Id_location AS 'p_Id_location'
         FROM Plannings p WHERE p.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -142,7 +142,8 @@ module.exports = class PlanningsRequest {
               id: row.p_Id,
               animationId: row.p_Id_animation,
               dateTime: row.p_Date_Hour,
-              content: row.p_Content
+              content: row.p_Content,
+              locationId: row.p_Id_location
             });
           });
         }
@@ -320,9 +321,9 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        UPDATE Plannings SET Date_hour = ?, Content = ? WHERE Id = ? AND Id_company = ?;
+        UPDATE Plannings SET Date_hour = ?, Content = ?, Id_location = ? WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [planning.dateTime, planning.content, planning.id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [planning.dateTime, planning.content, planning.locationId ?? null, planning.id, companyId], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -693,10 +694,10 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation, Id_location) 
+        VALUES (?, ?, ?, ?, ?)
       `;
-      await this.connectionMysql.sql(query, [companyId, planning.dateTime, planning.content, planning.animationId ?? null], async (result) => {
+      await this.connectionMysql.sql(query, [companyId, planning.dateTime, planning.content, planning.animationId ?? null, planning.locationId ?? null], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {

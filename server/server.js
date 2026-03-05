@@ -944,6 +944,7 @@ io.on("connection", async (socket) => {
       emitAllDecorations(id);
       emitAllMonthConfigs(id);
       emitAllWeekConfigs(id);
+      emitAllLocations(id);
       emitAllKindMeals(id);
       emitAllUserMealConfigs(id);
       emitAllUsers(id);
@@ -1030,6 +1031,13 @@ async function emitAllKindMeals(id) {
   const allKindMeals = await mealsRequest.getAllKindMealsByCompany(id);
   if (allKindMeals && allKindMeals.length) {
     io.to(`admin-company:${id}`).emit("kind meals info", { allKindMeals });
+  }
+}
+
+async function emitAllLocations(id) {
+  const allLocations = await mealsRequest.getAllLocationsByCompany(id);
+  if (allLocations && allLocations.length) {
+    io.to(`admin-company:${id}`).emit("locations info", { allLocations });
   }
 }
 

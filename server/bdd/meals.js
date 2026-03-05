@@ -142,6 +142,27 @@ module.exports = class MealsRequest {
     });
   }
 
+  async getAllLocationsByCompany(id) {
+    return new Promise(async (resolve) => {
+      const locations = [];
+      const query = `
+        SELECT l.Id AS 'l_Id', l.Label AS 'l_Label'
+        FROM Locations l WHERE l.Id_company = ? AND l.Is_active = 1;
+      `;
+      await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
+        if (result.rows && result.rows.length) {
+          result.rows.map((row) => {
+            locations.push({
+              id: row.l_Id,
+              label: row.l_Label,
+            });
+          });
+        }
+        resolve(locations);
+      });
+    });
+  }
+
   async getAllUsersByCompany(id) {
     return new Promise(async (resolve) => {
       const users = [];

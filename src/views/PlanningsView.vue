@@ -901,6 +901,18 @@ export default {
                   </ul>
                 </div>
               </div>
+              <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="null" placeholder="Localisation de l'animation" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
               <div class="content-input">
                 <input type="text" class="btn-input" id="planning-content-input" placeholder="Texte de remplacement" value=""/>
               </div>
@@ -931,6 +943,16 @@ export default {
               document.getElementById('search-anim-label').dataset.id = e.target.closest('li').dataset.id;
             }
           });
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
           document.getElementById('search-anim-label').addEventListener('keydown', (e) => {
             if (e.target.dataset.id != "null") {
               e.target.value = "";
@@ -939,6 +961,25 @@ export default {
           });
           document.getElementById('search-anim-label').addEventListener('keyup', (e) => {
             const list = document.getElementById('update-anim-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
             const search = e.target.value.toLowerCase();
             list.querySelectorAll('li').forEach((li) => {
               const label = li.querySelector('p').textContent.toLowerCase();
@@ -1017,6 +1058,7 @@ export default {
           const values = {
             content: document.getElementById('planning-content-input').value,
             animationId: document.getElementById('search-anim-label').dataset.id,
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
             hour: document.getElementById('planning-hour-input').value,
             minute: document.getElementById('planning-minute-input').value,
           };
@@ -1164,6 +1206,7 @@ export default {
     editAnimationPlanningModal(id) {
       const animation = state.plannings.find(a => a.id == id);
       const anim = state.animations.find(a => a.id == animation.animationId);
+      const location = state.locations.find(l => l.id == animation.locationId);
       Swal.mixin({
         customClass: {
           confirmButton: "btn btn-confirm",
@@ -1178,6 +1221,18 @@ export default {
             <div class="animation-search-input">
               <input type="text" class="btn-input" value="${anim.label}" disabled/>
             </div>
+            <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="${location ? location.id : 'null'}" value="${location ? location.label : ''}" placeholder="Localisation de l'animation" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
             <div class="content-input">
               <input type="text" class="btn-input" id="planning-content-input" placeholder="Texte de remplacement" value="${anim.label == animation.content ? '' : animation.content}"/>
             </div>
@@ -1198,6 +1253,35 @@ export default {
         reverseButtons: true,
         showDenyButton: false,
         willOpen: () => {
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
           document.getElementById('planning-hour-input').addEventListener('input', (e) => {
             if (e.target.value != '00') {
               if (e.target.value.length && e.target.value[0] == '0') {
@@ -1264,10 +1348,15 @@ export default {
         preConfirm: () => {
           const values = {
             id,
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
             hour: document.getElementById('planning-hour-input').value,
             minute: document.getElementById('planning-minute-input').value,
             content: document.getElementById('planning-content-input').value,
           };
+
+          if (values.locationId == "null") {
+            values.locationId = null;
+          }
 
           if (!values.hour || !values.minute) {
             Swal.showValidationMessage(`Vous devez sélectionner une heure.`);
@@ -1701,7 +1790,7 @@ export default {
     <div>
       <WaitingScreen v-if="loadingPrint" />
       <PlanningMonth v-if="printMonth" :weeks="weeks" :monthString="months[date.month]"
-        :month="`${date.month}-${date.year}`" @customiseImgModal="customiseImgModal"
+        :month="`${date.month}-${date.year}`" @customiseImgModal="customiseImgModal" :year="date.year"
         @closePlanning="togglePrintMonth" />
       <PlanningWeek v-if="printWeek.isActive" :dateStart="getPrintWeekStartDate" @closePlanningWeek="togglePrintWeek"
         @customiseImgModal="customiseImgModal" />
