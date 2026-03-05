@@ -501,7 +501,6 @@ export default {
                                     'justify-start': planningDay.startDeco && Array.isArray(planningDay.content),
                                     'justify-end': planningDay.endDeco && Array.isArray(planningDay.content) && planningDay.content.length > 2,
                                     'justify-center': (!planningDay.startDeco && !planningDay.endDeco) || !Array.isArray(planningDay.content) || (planningDay.content.length <= 2),
-                                    'space-y-4': Array.isArray(planningDay.content) && planningDay.content.length <= 2
                                 }">
                                     <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
                                     <div class="decoration-container justify-center"
@@ -701,7 +700,7 @@ export default {
 
                     &[data-nb="2"],
                     &[data-nb="3"] {
-                        @apply h-[25%] pt-3;
+                        @apply h-[20%];
                     }
 
                     &[data-nb="1"] {
@@ -719,7 +718,7 @@ export default {
             }
 
             .anim-list {
-                @apply flex flex-col items-center justify-around w-full overflow-hidden flex-none h-4/6;
+                @apply flex flex-col items-center justify-around w-full overflow-hidden flex-none h-[75%];
 
                 &.custom-height {
                     @apply h-auto;
