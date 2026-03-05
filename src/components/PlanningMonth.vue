@@ -450,7 +450,8 @@ export default {
                     </label>
                 </div>
                 <div class="title">
-                    <h1>Planning mensuel – {{ monthString }} {{ year }}</h1>
+                    <h1>Villa Marguerite</h1>
+                    <h2>Planning mensuel – {{ monthString }} {{ year }}</h2>
                 </div>
                 <div class="icon-right">
                     <label class="icon-label" @click="changeIcon('right')">
@@ -575,6 +576,11 @@ export default {
 
                 h1 {
                     @apply text-2xl font-bold p-0;
+                    line-height: 1.6rem;
+                }
+
+                h2 {
+                    @apply text-xl font-semibold;
                 }
             }
 
@@ -626,7 +632,7 @@ export default {
             @apply w-full h-full border-2 border-black text-xs border-collapse;
 
             th {
-                @apply text-center font-bold text-lg;
+                @apply text-center font-bold text-xl;
                 width: calc(100% / 7);
                 color: var(--text-color);
             }
@@ -713,7 +719,7 @@ export default {
             }
 
             .anim-list {
-                @apply flex flex-col items-center justify-around w-full overflow-hidden flex-none h-3/5;
+                @apply flex flex-col items-center justify-around w-full overflow-hidden flex-none h-4/6;
 
                 &.custom-height {
                     @apply h-auto;
@@ -721,8 +727,8 @@ export default {
 
                 .anim {
                     @apply flex items-center px-1 font-medium;
-                    font-size: 1rem;
-                    line-height: 1.2rem;
+                    font-size: 1.2rem;
+                    line-height: 1.4rem;
 
                     .hour {
                         @apply mr-1.5 font-bold;
