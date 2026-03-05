@@ -350,6 +350,7 @@ export default {
         },
         reloadConfig() {
             const config = state.month_configs.find(c => c.month == this.month);
+            console.log(config);
             if (config) {
                 this.choice.text = config.text;
                 this.choice.background = config.background;
@@ -357,15 +358,15 @@ export default {
 
                 if (config.iconLeftId) {
                     this.iconLeft.id = config.iconLeftId;
-                    if (state.animations.find(a => a.icons.find(i => i.id == config.iconLeftId))) {
-                        const icon = state.animations.find(a => a.icons.find(i => i.id == config.iconLeftId)).icons.find(i => i.id == config.iconLeftId);
+                    if (state.icons.find(i => i.id == config.iconLeftId)) {
+                        const icon = state.icons.find(i => i.id == config.iconLeftId);
                         this.showIcons.left = `${state.url}${icon.path.replace('./', '/')}`;
                     }
                 }
                 if (config.iconRightId) {
                     this.iconRight.id = config.iconRightId;
-                    if (state.animations.find(a => a.icons.find(i => i.id == config.iconRightId))) {
-                        const icon = state.animations.find(a => a.icons.find(i => i.id == config.iconRightId)).icons.find(i => i.id == config.iconRightId);
+                    if (state.icons.find(i => i.id == config.iconRightId)) {
+                        const icon = state.icons.find(i => i.id == config.iconRightId);
                         this.showIcons.right = `${state.url}${icon.path.replace('./', '/')}`;
                     }
                 }
