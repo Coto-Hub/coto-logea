@@ -12,7 +12,7 @@
             <div class="hour">
               <p>{{ anim.hour }}</p>
             </div>
-            <p>{{ anim.content }}</p>
+            <p>{{ anim.content }} <span v-if="anim.location" class="location">- {{ anim.location }}</span></p>
           </div>
         </div>
         <div v-if="icons && icons.length" class="icon-list">
@@ -106,7 +106,8 @@ export default {
         return {
           id: a.id,
           hour: moment(a.dateTime).format("HH[h]mm").replace(/^0/, ''),
-          content: a.content
+          content: a.content,
+          location: a.location
         };
       });
     }
@@ -212,6 +213,10 @@ export default {
         }
 
         // text-shadow: 0.1rem 0.1rem 0.5rem red; //rgba(0, 0, 0, 0.3);
+      }
+
+      .location {
+        @apply text-4xl font-medium;
       }
     }
   }

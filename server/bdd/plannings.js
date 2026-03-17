@@ -160,9 +160,10 @@ module.exports = class PlanningsRequest {
       };
       const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
       const query = `
-        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path'
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path', l.Label AS 'l_Label'
         FROM Plannings p
-        LEFT JOIN Icons i ON i.Id_animation = p.Id_animation 
+        LEFT JOIN Icons i ON i.Id_animation = p.Id_animation
+        LEFT JOIN Locations l ON l.Id = p.Id_location 
         WHERE p.Id_company = ? AND DATE(p.Date_Hour) = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
@@ -175,6 +176,7 @@ module.exports = class PlanningsRequest {
                 animationId: row.p_Id_animation,
                 dateTime: row.p_Date_Hour,
                 content: row.p_Content,
+                location: row.l_Label || null,
                 icons: [],
               });
             }
