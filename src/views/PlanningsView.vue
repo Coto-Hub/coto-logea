@@ -1063,6 +1063,10 @@ export default {
             minute: document.getElementById('planning-minute-input').value,
           };
 
+          if (values.locationId === "null") {
+            values.locationId = null;
+          }
+
           if (values.animationId == "null") {
             Swal.showValidationMessage(`Vous devez sélectionner une animation.`);
           }

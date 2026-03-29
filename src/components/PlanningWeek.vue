@@ -272,7 +272,7 @@ export default {
                                         <img v-if="day.icons.find(i => i.placement == 1)"
                                             :src="day.icons.find(i => i.placement == 1).iconPath" alt="decoration"
                                             loading="lazy" />
-                                        <img v-if="day.icons.find(i => i.placement == 2) && day.custom"
+                                        <img v-else-if="day.icons.find(i => i.placement == 2) && day.custom"
                                             :src="day.icons.find(i => i.placement == 2).iconPath" alt="decoration"
                                             loading="lazy" />
                                     </div>
