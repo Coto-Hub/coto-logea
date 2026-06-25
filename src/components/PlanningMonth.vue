@@ -26,6 +26,10 @@ export default {
             type: Number,
             required: true,
         },
+        year: {
+            type: String,
+            required: true,
+        },
     },
     data() {
         return {
@@ -346,6 +350,7 @@ export default {
         },
         reloadConfig() {
             const config = state.month_configs.find(c => c.month == this.month);
+            console.log(config);
             if (config) {
                 this.choice.text = config.text;
                 this.choice.background = config.background;
@@ -353,15 +358,15 @@ export default {
 
                 if (config.iconLeftId) {
                     this.iconLeft.id = config.iconLeftId;
-                    if (state.animations.find(a => a.icons.find(i => i.id == config.iconLeftId))) {
-                        const icon = state.animations.find(a => a.icons.find(i => i.id == config.iconLeftId)).icons.find(i => i.id == config.iconLeftId);
+                    if (state.icons.find(i => i.id == config.iconLeftId)) {
+                        const icon = state.icons.find(i => i.id == config.iconLeftId);
                         this.showIcons.left = `${state.url}${icon.path.replace('./', '/')}`;
                     }
                 }
                 if (config.iconRightId) {
                     this.iconRight.id = config.iconRightId;
-                    if (state.animations.find(a => a.icons.find(i => i.id == config.iconRightId))) {
-                        const icon = state.animations.find(a => a.icons.find(i => i.id == config.iconRightId)).icons.find(i => i.id == config.iconRightId);
+                    if (state.icons.find(i => i.id == config.iconRightId)) {
+                        const icon = state.icons.find(i => i.id == config.iconRightId);
                         this.showIcons.right = `${state.url}${icon.path.replace('./', '/')}`;
                     }
                 }
@@ -446,8 +451,8 @@ export default {
                     </label>
                 </div>
                 <div class="title">
-                    <h1>Planning mensuel</h1>
-                    <h2>{{ monthString }}</h2>
+                    <h1>Villa Marguerite</h1>
+                    <h2>Planning mensuel – {{ monthString }} {{ year }}</h2>
                 </div>
                 <div class="icon-right">
                     <label class="icon-label" @click="changeIcon('right')">
@@ -458,10 +463,9 @@ export default {
                     </label>
                 </div>
                 <div class="contact">
-                    <p>28 Bis Boulevard de Bury</p>
-                    <p>16000 Angoulême</p>
-                    <p>05 45 37 60 60</p>
-                    <p>villamarguerite@logea.asso.fr</p>
+                    <p><strong>Adresse :</strong> 28 Bis Boulevard de Bury, 16000 Angoulême</p>
+                    <p><strong>Email :</strong> villamarguerite@logea.asso.fr</p>
+                    <p><strong>Téléphone :</strong> 05 45 37 60 60</p>
                 </div>
             </div>
             <div class="table-border">
@@ -498,24 +502,32 @@ export default {
                                     'justify-start': planningDay.startDeco && Array.isArray(planningDay.content),
                                     'justify-end': planningDay.endDeco && Array.isArray(planningDay.content) && planningDay.content.length > 2,
                                     'justify-center': (!planningDay.startDeco && !planningDay.endDeco) || !Array.isArray(planningDay.content) || (planningDay.content.length <= 2),
-                                    'space-y-4': Array.isArray(planningDay.content) && planningDay.content.length <= 2
                                 }">
                                     <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
                                     <div class="decoration-container justify-center"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'"
-                                        v-if="planningDay.startDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 5) || !Array.isArray(planningDay.content))">
-                                        <img :src="getBase64Img(planningDay.startDeco.icon)" alt="decoration"
+                                        v-if="(planningDay.startDeco && ((Array.isArray(planningDay.content) && planningDay.content.length < 5) || !Array.isArray(planningDay.content))) || (Array.isArray(planningDay.content) && planningDay.content.length == 1 && planningDay.content[0].hour == '00h' && planningDay.endDeco)">
+                                        <img v-if="!planningDay.startDeco" :src="getBase64Img(planningDay.endDeco.icon)"
+                                            alt="decoration" loading="lazy" />
+                                        <img v-else :src="getBase64Img(planningDay.startDeco.icon)" alt="decoration"
                                             loading="lazy" />
                                     </div>
-                                    <div class="anim-list" :class="{ 'custom': !Array.isArray(planningDay.content) }"
+                                    <div class="anim-list"
+                                        :class="{ 'custom-height': !Array.isArray(planningDay.content) || (planningDay.content.length == 1 && planningDay.content[0].hour == '00h') }"
                                         :data-nb="Array.isArray(planningDay.content) ? `${planningDay.content.length}` : '1'">
-                                        <div v-if="Array.isArray(planningDay.content)" class="anim"
-                                            v-for="anim in planningDay.content" :key="anim.id">
+                                        <div v-if="Array.isArray(planningDay.content) && !(planningDay.content.length == 1 && planningDay.content[0].hour == '00h')"
+                                            class="anim" v-for="anim in planningDay.content" :key="anim.id">
                                             <p class="content"><span class="hour">{{ anim.hour }}:</span>{{
                                                 anim.content }}</p>
                                         </div>
                                         <div class="custom" v-else>
-                                            <p class="content">{{ planningDay.content }}</p>
+                                            <p class="content" :class="{ 'bold': !Array.isArray(planningDay.content) }">
+                                                {{
+                                                    Array.isArray(planningDay.content) ?
+                                                        planningDay.content[0].content :
+                                                        planningDay.content
+                                                }}
+                                            </p>
                                         </div>
                                     </div>
                                     <div class="decoration-container"
@@ -547,15 +559,15 @@ export default {
     @apply fixed inset-0 bg-white p-4 flex justify-center items-center;
 
     .planning-export {
-        @apply flex flex-col items-center justify-center h-full overflow-hidden p-2;
+        @apply flex flex-col items-center justify-center h-full overflow-hidden pt-1 px-2 pb-2;
         aspect-ratio: 297/210;
         background-color: var(--background-color);
 
         .planning-header {
-            @apply flex items-center justify-center relative w-full h-[10vh];
+            @apply flex items-center justify-center relative w-full h-[6vh] mb-1;
 
             .logo {
-                @apply absolute top-1/2 -translate-y-1/2 left-[2.5%] w-36;
+                @apply absolute top-1/2 -translate-y-1/2 left-[2.5%] w-32;
             }
 
             .title {
@@ -563,12 +575,12 @@ export default {
                 font-family: "Lazy Dog Regular";
 
                 h1 {
-                    @apply text-3xl font-bold p-0;
+                    @apply text-2xl font-bold p-0;
+                    line-height: 1.6rem;
                 }
 
                 h2 {
-                    @apply text-4xl font-bold;
-                    color: var(--text-color);
+                    @apply text-xl font-semibold;
                 }
             }
 
@@ -583,7 +595,7 @@ export default {
 
             .icon-left,
             .icon-right {
-                @apply w-1/6 h-full p-2 flex flex-col items-center justify-center overflow-hidden;
+                @apply w-1/12 h-full p-2 flex flex-col items-center justify-center overflow-hidden;
 
                 input {
                     @apply hidden;
@@ -612,21 +624,21 @@ export default {
         }
 
         .table-border {
-            @apply flex w-full;
-            height: calc(100% - 5.5rem);
+            @apply flex w-full h-full;
+            // height: calc(100% - 5.5rem);
         }
 
         .planning-table {
             @apply w-full h-full border-2 border-black text-xs border-collapse;
 
             th {
-                @apply text-center font-bold text-lg;
+                @apply text-center font-bold text-xl;
                 width: calc(100% / 7);
                 color: var(--text-color);
             }
 
             thead {
-                height: 7%;
+                height: 4.5%;
 
                 tr,
                 th {
@@ -679,7 +691,7 @@ export default {
                 }
 
                 .decoration-container {
-                    @apply h-[25%] w-full flex pt-1;
+                    @apply h-[20%] w-full flex pt-1;
 
                     img {
                         // @apply h-full;
@@ -689,11 +701,11 @@ export default {
 
                     &[data-nb="2"],
                     &[data-nb="3"] {
-                        @apply h-[30%] pt-3;
+                        @apply h-[20%];
                     }
 
                     &[data-nb="1"] {
-                        @apply h-[30%];
+                        @apply h-[25%];
                     }
                 }
 
@@ -707,12 +719,16 @@ export default {
             }
 
             .anim-list {
-                @apply flex flex-col items-center justify-around w-full overflow-hidden pt-2.5 flex-none;
+                @apply flex flex-col items-center justify-around w-full overflow-hidden flex-none h-[75%];
+
+                &.custom-height {
+                    @apply h-auto;
+                }
 
                 .anim {
                     @apply flex items-center px-1 font-medium;
-                    font-size: 0.9rem;
-                    line-height: 1.5rem;
+                    font-size: 1.2rem;
+                    line-height: 1.4rem;
 
                     .hour {
                         @apply mr-1.5 font-bold;
@@ -724,8 +740,11 @@ export default {
                 }
 
                 .custom {
-                    @apply px-1 py-1 text-base text-center;
-                    font-family: "Lazy Dog Regular";
+                    @apply px-1 py-1 text-base text-center font-bold;
+
+                    .bold {
+                        font-family: "Lazy Dog Regular";
+                    }
                 }
 
                 &[data-nb="1"] {

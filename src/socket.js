@@ -15,6 +15,7 @@ export const state = reactive({
     month_configs: [],
     week_configs: [],
     userMealConfigs: [],
+    locations: [],
     kindMeals: [],
     users: [],
     guests: [],
@@ -153,6 +154,14 @@ socket.on("kind meals info", ({ allKindMeals }) => {
     const kindMealsList = document.getElementById("update-meal-list");
     if (kindMealsList) {
         kindMealsList.dispatchEvent(new Event("update"));
+    }
+});
+
+socket.on("locations info", ({ allLocations }) => {
+    state.locations = allLocations;
+    const locationsList = document.getElementById("update-locations-list");
+    if (locationsList) {
+        locationsList.dispatchEvent(new Event("update"));
     }
 });
 

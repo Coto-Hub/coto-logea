@@ -132,7 +132,7 @@ module.exports = class PlanningsRequest {
     return new Promise(async (resolve) => {
       const Plannings = [];
       const query = `
-        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content'
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', p.Id_location AS 'p_Id_location'
         FROM Plannings p WHERE p.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -142,7 +142,8 @@ module.exports = class PlanningsRequest {
               id: row.p_Id,
               animationId: row.p_Id_animation,
               dateTime: row.p_Date_Hour,
-              content: row.p_Content
+              content: row.p_Content,
+              locationId: row.p_Id_location
             });
           });
         }
@@ -159,9 +160,10 @@ module.exports = class PlanningsRequest {
       };
       const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
       const query = `
-        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path'
+        SELECT p.Id AS 'p_Id', p.Id_animation AS 'p_Id_animation' ,p.Date_Hour AS 'p_Date_Hour', p.Content AS 'p_Content', i.Id AS 'i_Id', i.Label AS 'i_Label', i.Path AS 'i_Path', l.Label AS 'l_Label'
         FROM Plannings p
-        LEFT JOIN Icons i ON i.Id_animation = p.Id_animation 
+        LEFT JOIN Icons i ON i.Id_animation = p.Id_animation
+        LEFT JOIN Locations l ON l.Id = p.Id_location 
         WHERE p.Id_company = ? AND DATE(p.Date_Hour) = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
@@ -174,6 +176,7 @@ module.exports = class PlanningsRequest {
                 animationId: row.p_Id_animation,
                 dateTime: row.p_Date_Hour,
                 content: row.p_Content,
+                location: row.l_Label || null,
                 icons: [],
               });
             }
@@ -320,9 +323,9 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        UPDATE Plannings SET Date_hour = ?, Content = ? WHERE Id = ? AND Id_company = ?;
+        UPDATE Plannings SET Date_hour = ?, Content = ?, Id_location = ? WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [planning.dateTime, planning.content, planning.id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [planning.dateTime, planning.content, planning.locationId ?? null, planning.id, companyId], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -693,10 +696,10 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation, Id_location) 
+        VALUES (?, ?, ?, ?, ?)
       `;
-      await this.connectionMysql.sql(query, [companyId, planning.dateTime, planning.content, planning.animationId ?? null], async (result) => {
+      await this.connectionMysql.sql(query, [companyId, planning.dateTime, planning.content, planning.animationId ?? null, planning.locationId ?? null], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {

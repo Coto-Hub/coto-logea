@@ -140,11 +140,22 @@ export default {
                 const currentDate = dateStart.clone().add(i, 'd');
                 const elements = state.plannings.filter((planning) => moment(planning.dateTime).isSame(currentDate, 'day')).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)).map(
                     (planning) => {
+                        const location = state.locations.find((loc) => loc.id == planning.locationId);
+
                         if (planning.animationId == null) {
                             isCustom = true;
                             return {
                                 id: planning.id,
                                 content: planning.content,
+                                location: location ? location.label : null
+                            }
+                        }
+                        else if (moment(planning.dateTime).hour() == 0 && moment(planning.dateTime).minute() == 0) {
+                            isCustom = true;
+                            return {
+                                id: planning.id,
+                                content: planning.content,
+                                location: location ? location.label : null
                             }
                         }
                         else {
@@ -153,6 +164,7 @@ export default {
                                 content: planning.content,
                                 hour: moment(planning.dateTime).minute() == 0 ? moment(planning.dateTime).format('HH') + 'h' : moment(planning.dateTime).format('HH:mm').replace(':', 'h'),
                                 dayPart: moment(planning.dateTime).hour() <= 12 ? 'am' : 'pm',
+                                location: location ? location.label : null
                             }
                         }
                     }
@@ -251,21 +263,17 @@ export default {
                             <td :colspan="(index >= 5 || day.custom) ? 2 : 1">
                                 <div class="flex w-full h-full" :class="{ 'custom-container': day.custom }">
                                     <div class="anim-list anim-am" v-if="!day.custom">
-                                        <p v-html="(index < 5 ? day.am : day.am.concat(day.pm)).map((e) => `<span class='hour'>${e.hour}:</span>
-                                            ${e.content}`).join('<br>')">
+                                        <p
+                                            v-html="(index < 5 ? day.am : day.am.concat(day.pm)).map((e) => `<span class='hour'>${e.hour}:</span>
+                                            ${e.content} ${e.location ? `<span class='location'>(&nbsp;${e.location}&nbsp;)</span>` : ''}`).join('<br>')">
                                         </p>
-                                        <!-- <div class="anim"
-                                            v-for="element in (index < 5 ? day.am : day.am.concat(day.pm))"
-                                            :key="element.id">
-                                            <p class="content" :class="{ 'custom-wrap': element.content.length > 18 }">
-                                                <span class="hour">{{ element.hour }}:</span>
-                                                {{ element.content }}
-                                            </p>
-                                        </div> -->
                                     </div>
-                                    <div class="icon-container"
-                                        v-if="day.icons.length && day.icons.find(i => i.placement == 1)">
-                                        <img :src="day.icons.find(i => i.placement == 1).iconPath" alt="decoration"
+                                    <div class="icon-container" v-if="day.icons.length">
+                                        <img v-if="day.icons.find(i => i.placement == 1)"
+                                            :src="day.icons.find(i => i.placement == 1).iconPath" alt="decoration"
+                                            loading="lazy" />
+                                        <img v-else-if="day.icons.find(i => i.placement == 2) && day.custom"
+                                            :src="day.icons.find(i => i.placement == 2).iconPath" alt="decoration"
                                             loading="lazy" />
                                     </div>
                                     <div class="custom" v-if="day.custom">
@@ -283,7 +291,7 @@ export default {
                                     <div class="anim-list anim-pm">
                                         <p
                                             v-html="day.pm.map((e) => `<span class='hour'>${e.hour}:</span>
-                                            ${e.content}`).join('<br>') +
+                                            ${e.content} ${e.location ? `<span class='location'>(&nbsp;${e.location}&nbsp;)</span>` : ''}`).join('<br>') +
                                                 (day.icons.length && day.icons.find(i => i.placement == 2) ? `<img class='icon' src='${day.icons.find(i => i.placement == 2).iconPath}' alt='decoration' loading='lazy' />` : '')">
                                         </p>
                                     </div>
@@ -411,6 +419,10 @@ export default {
                                     @apply font-semibold pr-1;
                                 }
 
+                                .location {
+                                    @apply font-medium text-base text-black/90;
+                                }
+
                                 .icon {
                                     @apply float-right max-w-11 max-h-11 mt-1;
                                 }
@@ -440,7 +452,7 @@ export default {
                         }
 
                         .custom-container {
-                            @apply text-xl;
+                            @apply text-xl justify-center;
                             font-family: "Lazy Dog Regular";
 
                             .icon-container {
@@ -453,7 +465,7 @@ export default {
                         }
 
                         .icon-container {
-                            @apply max-w-24 self-center px-1;
+                            @apply max-w-20 self-center mx-1;
                         }
                     }
                 }

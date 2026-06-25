@@ -684,6 +684,7 @@ main {
   }
 
   .animation-search-input,
+  .location-search-input,
   .users-search-input {
     @apply relative;
 
@@ -742,7 +743,7 @@ main {
       @apply overflow-hidden w-full h-0 transition-all duration-700 top-11;
 
       li {
-        @apply flex w-full text-center py-1 pl-9 border-b-2 cursor-pointer;
+        @apply flex w-full text-center py-1 px-1 justify-center border-b-2 cursor-pointer;
 
         &:hover {
           @apply bg-gray-200/50;
@@ -1927,8 +1928,8 @@ main {
         }
       }
 
-      &.custom {
-        @apply h-1/2 text-lg;
+      &.custom-height {
+        @apply h-auto text-base px-2;
       }
     }
   }

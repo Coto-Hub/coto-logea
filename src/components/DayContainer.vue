@@ -40,16 +40,25 @@ export default {
 <template>
     <div class="day">
         <span :class="{ 'month': planningDay.isCurrentMonth }">{{ planningDay.day }}</span>
-        <div class="decoration-container justify-center" v-if="planningDay.startDeco">
-            <img :src="getUrl + planningDay.startDeco.icon.path.replace('./', '/')" alt="decoration" loading="lazy" />
+        <div class="decoration-container justify-center"
+            v-if="planningDay.startDeco || (Array.isArray(planningDay.content) && planningDay.content.length == 1 && planningDay.content[0].hour == '00:00' && planningDay.endDeco)">
+            <img v-if="!planningDay.startDeco" :src="getUrl + planningDay.endDeco.icon.path.replace('./', '/')"
+                alt="decoration" loading="lazy" />
+            <img v-else :src="getUrl + planningDay.startDeco.icon.path.replace('./', '/')" alt="decoration"
+                loading="lazy" />
         </div>
-        <div class="anim-list" :class="{ 'custom': !Array.isArray(planningDay.content) }">
-            <div v-if="Array.isArray(planningDay.content)" class="anim" v-for="anim in planningDay.content"
-                :key="anim.id">
+        <div class="anim-list"
+            :class="{ 'custom-height': !Array.isArray(planningDay.content) || (planningDay.content.length == 1 && planningDay.content[0].hour == '00:00') }">
+            <div v-if="Array.isArray(planningDay.content) && !(planningDay.content.length == 1 && planningDay.content[0].hour == '00:00')"
+                class="anim" v-for="anim in planningDay.content" :key="anim.id">
                 <p class="content"><span class="hour">{{ anim.hour }}:</span>{{ anim.content }}</p>
             </div>
             <div class="custom" v-else>
-                <p class="content">{{ planningDay.content }}</p>
+                <p class="content" :class="{ 'bold': !Array.isArray(planningDay.content) }">{{
+                    Array.isArray(planningDay.content) ? planningDay.content[0].content :
+                        planningDay.content
+                }}
+                </p>
             </div>
         </div>
         <div class="decoration-container"
