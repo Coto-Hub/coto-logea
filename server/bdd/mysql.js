@@ -16,7 +16,8 @@ if (process.env.DATABASE) {
             host: process.env.SSH_HOST,
             port: 22222,
             username: 'coto',
-            password: process.env.SSH_PASSWORD
+            password: process.env.SSH_PASSWORD,
+            privateKey: require('fs').readFileSync('C:/Users/coto-/.ssh/id_ed25519')
         }
         const forwardConfig = {
             srcHost: '127.0.0.1',

@@ -5,7 +5,7 @@ var CryptoJS = require("crypto-js");
 const io = require("socket.io")(httpServer, {
   path: '/mysocket',
   cors: {
-    origin: [process.env.SERVER_CORS, "*"],
+    origin: [process.env.SERVER_CORS, "http://localhost:5173"],
     credentials: true
   },
 });
