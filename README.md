@@ -34,3 +34,5 @@ npm run build
 npm run lint
 ```
 # coto-logea
+
+05/08/2026
