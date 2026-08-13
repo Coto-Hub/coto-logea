@@ -61,7 +61,7 @@ module.exports = class PlanningsRequest {
     return new Promise(async (resolve) => {
       const Animations = [];
       const query = `
-        SELECT a.Id AS 'a_Id', a.Label AS 'a_Label', a.Is_active AS 'a_Is_active'
+        SELECT a.Id AS 'a_Id', a.Label AS 'a_Label', a.Is_active AS 'a_Is_active', a.Id_location AS 'a_Id_location'
         FROM Animations a WHERE a.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -72,7 +72,8 @@ module.exports = class PlanningsRequest {
                 id: row.a_Id,
                 label: row.a_Label,
                 icons: [],
-                isActive: row.a_Is_active
+                isActive: row.a_Is_active,
+                locationId: row.a_Id_location
               });
             }
           });
@@ -109,7 +110,7 @@ module.exports = class PlanningsRequest {
     return new Promise(async (resolve) => {
       const Reccurences = [];
       const query = `
-        SELECT r.Id AS 'r_Id', r.Id_animation AS 'r_Id_animation', r.Day AS 'r_Day', r.Hour AS 'r_Hour'
+        SELECT r.Id AS 'r_Id', r.Id_animation AS 'r_Id_animation', r.Day AS 'r_Day', r.Hour AS 'r_Hour', r.Id_location AS 'r_Id_location'
         FROM Reccurences r, Animations a WHERE r.Id_animation = a.Id AND a.Id_company = ?;
       `;
       await this.connectionMysql.sql(query, [parseInt(id)], (result) => {
@@ -119,7 +120,8 @@ module.exports = class PlanningsRequest {
               id: row.r_Id,
               animationId: row.r_Id_animation,
               day: row.r_Day,
-              time: row.r_Hour
+              time: row.r_Hour,
+              locationId: row.r_Id_location
             });
           });
         }
@@ -279,9 +281,9 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        UPDATE Animations SET Label = ? WHERE Id = ? AND Id_company = ?;
+        UPDATE Animations SET Label = ?, Id_location = ? WHERE Id = ? AND Id_company = ?;
       `;
-      await this.connectionMysql.sql(query, [anim.label, anim.id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [anim.label, anim.locationId ?? null, anim.id, companyId], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -301,9 +303,9 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        UPDATE Reccurences SET Day = ?, Hour = ? WHERE Id = ? AND Id_animation IN (SELECT Id FROM Animations WHERE Id_company = ?);
+        UPDATE Reccurences SET Day = ?, Hour = ?, Id_location = ? WHERE Id = ? AND Id_animation IN (SELECT Id FROM Animations WHERE Id_company = ?);
       `;
-      await this.connectionMysql.sql(query, [reccurence.day, reccurence.time, reccurence.id, companyId], async (result) => {
+      await this.connectionMysql.sql(query, [reccurence.day, reccurence.time, reccurence.locationId ?? null, reccurence.id, companyId], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -534,10 +536,10 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-      DELETE FROM Icons WHERE Id_animation = ? AND Id IN (?);
       UPDATE Month_configs SET Id_icon_left = NULL WHERE Id_company = ? AND Id_icon_left IN (?);
       UPDATE Month_configs SET Id_icon_right = NULL WHERE Id_company = ? AND Id_icon_right IN (?);
       DELETE FROM Decorations WHERE Id_company = ? AND Id_icon IN (?);
+      DELETE FROM Icons WHERE Id_animation = ? AND Id IN (?);
       `;
       await this.connectionMysql.sql(query, [animationId, icons, companyId, icons, companyId, icons, companyId, icons], async (result) => {
         if (result.error) {
@@ -559,12 +561,12 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation) 
+        INSERT INTO Plannings (Id_company, Date_hour, Content, Id_animation, Id_location) 
         VALUES ?
       `;
       const values = [];
       animations.map((a) => {
-        values.push([companyId, a.dateTime, a.content, a.animationId])
+        values.push([companyId, a.dateTime, a.content, a.animationId, a.locationId ?? null])
       });
       await this.connectionMysql.sql(query, [values], async (result) => {
         if (result.error) {
@@ -586,10 +588,10 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Animations (Id_company, Label) 
-        VALUES (?, ?)
+        INSERT INTO Animations (Id_company, Label, Id_location) 
+        VALUES (?, ?, ?) 
       `;
-      await this.connectionMysql.sql(query, [companyId, anim.label], async (result) => {
+      await this.connectionMysql.sql(query, [companyId, anim.label, anim.locationId ?? null], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {
@@ -613,10 +615,10 @@ module.exports = class PlanningsRequest {
         value: null,
       };
       const query = `
-        INSERT INTO Reccurences (Id_animation, Day, Hour) 
-        VALUES (?, ?, ?)
+        INSERT INTO Reccurences (Id_animation, Day, Hour, Id_location) 
+        VALUES (?, ?, ?, ?) 
       `;
-      await this.connectionMysql.sql(query, [reccurence.animationId, reccurence.day, reccurence.time], async (result) => {
+      await this.connectionMysql.sql(query, [reccurence.animationId, reccurence.day, reccurence.time, reccurence.locationId ?? null], async (result) => {
         if (result.error) {
           console.log(result.error);
           info.alert = {

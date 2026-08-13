@@ -156,6 +156,18 @@ export default {
         html: `
             <div class="add-anim-modal-container modal-container">
               <input type="text" class="btn-input" id="anim-label" placeholder="Nom de l'animation" />
+              <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="null" placeholder="Localisation de l'animation" autocomplete="off" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
               <h2>Icônes</h2>
               <div class="icons-list">
                 <label for="import-icon" id="label-import-icon" class="btn btn-import">
@@ -204,6 +216,35 @@ export default {
               fileReader.readAsDataURL(files[0]);
             }
           });
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
           document.getElementById("anim-label").addEventListener('input', (e) => {
             if (e.target.value == " ") {
               e.target.value = "";
@@ -217,6 +258,7 @@ export default {
           const values = {
             label: document.getElementById("anim-label").value,
             icons: Array.from(document.getElementsByClassName("icon-container can-delete new-icon")).map(icon => { return { src: icon.dataset.src, label: icon.dataset.name }; }),
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
           };
 
           if (!values.label) {
@@ -245,7 +287,7 @@ export default {
         html: `
             <div class="add-reccurence-modal-container modal-container">
               <div class="animation-search-input">
-                <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" />
+                <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" autocomplete="off" />
                 <div class="search-result">
                   <ul id="update-anim-list">
                     ${state.animations.filter(a => a.isActive).map(a => `
@@ -286,6 +328,18 @@ export default {
                   <input type="text" class="btn-input" id="reccurence-minute-input" placeholder="00" />
                 </div>
               </div>
+              <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="null" placeholder="Localisation de l'animation" autocomplete="off" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
             </div>
             `,
         confirmButtonText: 'Ajouter',
@@ -307,6 +361,15 @@ export default {
             if (e.target.closest('li')) {
               document.getElementById('search-anim-label').value = e.target.closest('li').querySelector('p').textContent;
               document.getElementById('search-anim-label').dataset.id = e.target.closest('li').dataset.id;
+              const animation = state.animations.find(a => a.id == e.target.closest('li').dataset.id);
+              if (animation && animation.locationId) {
+                document.getElementById('search-location-label').value = state.locations.find(l => l.id == animation.locationId)?.label ?? '';
+                document.getElementById('search-location-label').dataset.id = animation.locationId ?? null;
+              }
+              else {
+                document.getElementById('search-location-label').value = '';
+                document.getElementById('search-location-label').dataset.id = null;
+              }
             }
           });
           document.getElementById('search-anim-label').addEventListener('keydown', (e) => {
@@ -390,6 +453,35 @@ export default {
               document.getElementById('reccurence-hour-input').focus();
             }
           });
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
         },
         preConfirm: () => {
           const values = {
@@ -397,6 +489,7 @@ export default {
             day: document.getElementById('reccurence-day-input').dataset.number ?? 1,
             hour: document.getElementById('reccurence-hour-input').value,
             minute: document.getElementById('reccurence-minute-input').value,
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
           };
 
           if (values.animationId == "null") {
@@ -410,7 +503,7 @@ export default {
         },
       }).then((data) => {
         if (data.isConfirmed) {
-          socket.emit("add reccurence", { animationId: data.value.animationId, day: data.value.day, time: `${data.value.hour}:${data.value.minute}` });
+          socket.emit("add reccurence", { animationId: data.value.animationId, day: data.value.day, time: `${data.value.hour}:${data.value.minute}`, locationId: data.value.locationId });
         }
         this.listReccurenceModal();
       });
@@ -430,6 +523,18 @@ export default {
         html: `
             <div class="add-anim-modal-container modal-container">
               <input type="text" class="btn-input" id="anim-label" placeholder="Nom de l'animation" value="${animation.label}" />
+              <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="${animation.locationId ?? 'null'}" value="${animation.locationId ? state.locations.find(l => l.id == animation.locationId)?.label : ''}" placeholder="Localisation de l'animation" autocomplete="off" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              </div>
               <h2>Icônes</h2>
               <div class="icons-list" id="icons-list-edit">
                 <label for="import-icon" id="label-import-icon" class="btn btn-import">
@@ -483,6 +588,35 @@ export default {
               fileReader.readAsDataURL(files[0]);
             }
           });
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
           document.getElementById("anim-label").addEventListener('input', (e) => {
             if (e.target.value == " ") {
               e.target.value = "";
@@ -502,10 +636,15 @@ export default {
             label: document.getElementById("anim-label").value,
             newIcons: Array.from(document.getElementsByClassName("icon-container new-icon")).map(icon => { return { src: icon.dataset.src, label: icon.dataset.name }; }),
             removeIcons: Array.from(document.getElementsByClassName("icon-container remove-icon")).map(icon => icon.dataset.id),
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
           };
 
           if (!values.label) {
             Swal.showValidationMessage(`L'animation doit avoir un Nom.`);
+          }
+
+          if (values.locationId == "null") {
+            values.locationId = null;
           }
 
           return values;
@@ -564,6 +703,18 @@ export default {
                   <input type="text" class="btn-input" id="reccurence-hour-input" value="${reccurence.time.split(':')[0]}" placeholder="00" />
                   <div class="points-icon"></div>
                   <input type="text" class="btn-input" id="reccurence-minute-input" value="${reccurence.time.split(':')[1]}" placeholder="00" />
+                </div>
+              </div>
+              <div class="location-search-input">
+                <input type="text" class="btn-input" id="search-location-label" data-id="${reccurence.locationId ?? 'null'}" value="${reccurence.locationId ? state.locations.find(l => l.id == reccurence.locationId)?.label : ''}" placeholder="Localisation de l'animation" autocomplete="off" />
+                <div class="search-result">
+                  <ul id="update-location-list">
+                    ${state.locations.map(l => `
+                      <li data-id="${l.id}">
+                        <p>${l.label}</p>
+                      </li>
+                    `).join('')}
+                  </ul>
                 </div>
               </div>
             </div>
@@ -637,12 +788,42 @@ export default {
               document.getElementById('reccurence-hour-input').focus();
             }
           });
+          document.getElementById('update-location-list').addEventListener('update', () => {
+            const list = document.getElementById('update-location-list');
+            list.innerHTML = state.locations.map(l => `<li data-id="${l.id}"><p>${l.label}</p></li>`).join('');
+          });
+          document.getElementById('update-location-list').addEventListener('click', (e) => {
+            if (e.target.closest('li')) {
+              document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
+              document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
+          });
         },
         preConfirm: () => {
           const values = {
             day: document.getElementById('reccurence-day-input').dataset.number ?? 1,
             hour: document.getElementById('reccurence-hour-input').value,
             minute: document.getElementById('reccurence-minute-input').value,
+            locationId: document.getElementById('search-location-label').dataset.id ?? null,
           };
 
           if (!values.hour || !values.minute) {
@@ -650,6 +831,10 @@ export default {
           }
           else {
             values.time = `${values.hour}:${values.minute}`;
+          }
+
+          if (values.locationId == "null") {
+            values.locationId = null;
           }
 
           return values;
@@ -859,6 +1044,7 @@ export default {
             content: state.animations.find(a => a.id == r.animationId).label,
             iconId: state.animations.find(a => a.id == r.animationId).icons[Math.floor(Math.random() * state.animations.find(a => a.id == r.animationId).icons.length)],
             animationId: r.animationId,
+            locationId: r.locationId || listAnimations.find(a => a.animationId == r.animationId)?.locationId || null,
           });
           start.add(7, 'days');
         }
@@ -890,7 +1076,7 @@ export default {
         html: `
             <div class="add-anim-day-modal-container modal-container">
               <div class="animation-search-input">
-                <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" />
+                <input type="text" class="btn-input" id="search-anim-label" data-id="null" placeholder="Sélection de l'animation" autocomplete="off" />
                 <div class="search-result">
                   <ul id="update-anim-list">
                     ${state.animations.filter(a => a.isActive).map(a => `
@@ -902,7 +1088,7 @@ export default {
                 </div>
               </div>
               <div class="location-search-input">
-                <input type="text" class="btn-input" id="search-location-label" data-id="null" placeholder="Localisation de l'animation" />
+                <input type="text" class="btn-input" id="search-location-label" data-id="null" placeholder="Localisation de l'animation" autocomplete="off" />
                 <div class="search-result">
                   <ul id="update-location-list">
                     ${state.locations.map(l => `
@@ -919,9 +1105,9 @@ export default {
               <div class="reccurence-inputs">
                 <h2>Heure de la journée</h2>
                 <div class="reccurence-hour">
-                  <input type="text" class="btn-input" id="planning-hour-input" placeholder="15" />
+                  <input type="text" class="btn-input" id="planning-hour-input" placeholder="15" autocomplete="off" />
                   <div class="points-icon"></div>
-                  <input type="text" class="btn-input" id="planning-minute-input" placeholder="00" />
+                  <input type="text" class="btn-input" id="planning-minute-input" placeholder="00" autocomplete="off" />
                 </div>
               </div>
             </div>
@@ -941,6 +1127,15 @@ export default {
             if (e.target.closest('li')) {
               document.getElementById('search-anim-label').value = e.target.closest('li').querySelector('p').textContent;
               document.getElementById('search-anim-label').dataset.id = e.target.closest('li').dataset.id;
+              const animation = state.animations.find(a => a.id == e.target.closest('li').dataset.id);
+              if (animation && animation.locationId) {
+                document.getElementById('search-location-label').value = state.locations.find(l => l.id == animation.locationId)?.label ?? '';
+                document.getElementById('search-location-label').dataset.id = animation.locationId ?? null;
+              }
+              else {
+                document.getElementById('search-location-label').value = '';
+                document.getElementById('search-location-label').dataset.id = null;
+              }
             }
           });
           document.getElementById('update-location-list').addEventListener('update', () => {
@@ -952,6 +1147,25 @@ export default {
               document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
               document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
             }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
           });
           document.getElementById('search-anim-label').addEventListener('keydown', (e) => {
             if (e.target.dataset.id != "null") {
@@ -1226,7 +1440,7 @@ export default {
               <input type="text" class="btn-input" value="${anim.label}" disabled/>
             </div>
             <div class="location-search-input">
-                <input type="text" class="btn-input" id="search-location-label" data-id="${location ? location.id : 'null'}" value="${location ? location.label : ''}" placeholder="Localisation de l'animation" />
+                <input type="text" class="btn-input" id="search-location-label" data-id="${location ? location.id : 'null'}" value="${location ? location.label : ''}" placeholder="Localisation de l'animation" autocomplete="off" />
                 <div class="search-result">
                   <ul id="update-location-list">
                     ${state.locations.map(l => `
@@ -1243,9 +1457,9 @@ export default {
             <div class="reccurence-inputs">
               <h2>Heure de la journée</h2>
               <div class="reccurence-hour">
-                <input type="text" class="btn-input" id="planning-hour-input" value="${moment(animation.dateTime).format('HH')}" placeholder="00" />
+                <input type="text" class="btn-input" id="planning-hour-input" value="${moment(animation.dateTime).format('HH')}" placeholder="00" autocomplete="off" />
                 <div class="points-icon"></div>
-                <input type="text" class="btn-input" id="planning-minute-input" value="${moment(animation.dateTime).format('mm')}" placeholder="00" />
+                <input type="text" class="btn-input" id="planning-minute-input" value="${moment(animation.dateTime).format('mm')}" placeholder="00" autocomplete="off" />
               </div>
             </div>
           </div>
@@ -1266,6 +1480,25 @@ export default {
               document.getElementById('search-location-label').value = e.target.closest('li').querySelector('p').textContent;
               document.getElementById('search-location-label').dataset.id = e.target.closest('li').dataset.id;
             }
+          });
+          document.getElementById('search-location-label').addEventListener('keydown', (e) => {
+            if (e.target.dataset.id != "null") {
+              e.target.value = "";
+              e.target.dataset.id = null;
+            }
+          });
+          document.getElementById('search-location-label').addEventListener('keyup', (e) => {
+            const list = document.getElementById('update-location-list');
+            const search = e.target.value.toLowerCase();
+            list.querySelectorAll('li').forEach((li) => {
+              const label = li.querySelector('p').textContent.toLowerCase();
+              if (label.indexOf(search) == -1 && search.length != 0) {
+                li.style.display = 'none';
+              }
+              else {
+                li.style.display = 'flex';
+              }
+            });
           });
           document.getElementById('search-location-label').addEventListener('keydown', (e) => {
             if (e.target.dataset.id != "null") {

@@ -649,7 +649,11 @@ main {
     }
 
     h2 {
-      @apply text-xl pt-4 pb-1 font-medium;
+      @apply text-xl pt-1 pb-1 font-medium;
+    }
+
+    .location-search-input {
+      @apply pt-2;
     }
   }
 

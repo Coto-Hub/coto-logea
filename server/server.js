@@ -475,12 +475,10 @@ io.on("connection", async (socket) => {
           createAlert(socket, removeIconAnimationData.alert.title, removeIconAnimationData.alert.error);
         }
       }
-      if (data.label != data.lastLabel) {
-        const updateAnimationData = await planningsRequest.updateAnimation(socket.company.id, data);
+      const updateAnimationData = await planningsRequest.updateAnimation(socket.company.id, data);
 
-        if (updateAnimationData && updateAnimationData.alert) {
-          createAlert(socket, updateAnimationData.alert.title, updateAnimationData.alert.error);
-        }
+      if (updateAnimationData && updateAnimationData.alert) {
+        createAlert(socket, updateAnimationData.alert.title, updateAnimationData.alert.error);
       }
 
       emitAllAnimations(socket.company.id);
@@ -806,6 +804,7 @@ io.on("connection", async (socket) => {
 
   socket.on("delete decoration", async function (id) {
     if (id != null && socket.sessionID && socket.company) {
+      const removeDecorationsData = await planningsRequest.removeDecorations(socket.company.id, [id]);
       const removeDecorationData = await planningsRequest.removeDecoration(socket.company.id, id);
       if (removeDecorationData && removeDecorationData.alert) {
         createAlert(socket, removeDecorationData.alert.title, removeDecorationData.alert.error);
