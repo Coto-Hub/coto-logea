@@ -35,4 +35,4 @@ npm run lint
 ```
 # coto-logea
 
-05/08/2026
+03/09/2026
