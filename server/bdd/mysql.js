@@ -1,88 +1,72 @@
 require('dotenv').config();
+const fs = require('fs');
+const net = require('net');
 const mysql = require('mysql2');
 const { Client } = require('ssh2');
 
+const dbConfig = {
+    host: '127.0.0.1',
+    port: 3306,
+    user: process.env.BDD_USER,
+    password: process.env.BDD_PASSWORD,
+    database: process.env.DATABASE,
+    timezone: 'Z',
+    waitForConnections: true,
+    connectionLimit: 5,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+};
+
+let poolPromise = null;
+
 if (process.env.DATABASE) {
-    let connectionMysql = null;
-    const dbServer = {
-        host: '127.0.0.1',
-        port: 3306,
-        user: process.env.BDD_USER,
-        password: process.env.BDD_PASSWORD,
-        timezone: 'Z'
-    }
-    if (process.env.SSH_HOST) {
-        const tunnelConfig = {
+    poolPromise = process.env.SSH_HOST
+        ? createTunnelPool()
+        : Promise.resolve(mysql.createPool(dbConfig));
+}
+
+function createTunnelPool() {
+    return new Promise((resolve, reject) => {
+        const ssh = new Client();
+
+        ssh.on('ready', () => {
+            const server = net.createServer((socket) => {
+                ssh.forwardOut('127.0.0.1', socket.remotePort || 0, dbConfig.host, dbConfig.port, (err, stream) => {
+                    if (err) return socket.destroy();
+                    stream.on('error', () => socket.destroy());
+                    socket.on('error', () => stream.end());
+                    socket.pipe(stream).pipe(socket);
+                });
+            });
+
+            server.listen(0, '127.0.0.1', () => {
+                resolve(mysql.createPool({
+                    ...dbConfig,
+                    port: server.address().port,
+                    multipleStatements: true,
+                }));
+            });
+        });
+
+        ssh.on('error', reject);
+
+        ssh.connect({
             host: process.env.SSH_HOST,
             port: 22222,
             username: 'coto',
             password: process.env.SSH_PASSWORD,
-            privateKey: require('fs').readFileSync('C:/Users/coto-/.ssh/id_ed25519')
-        }
-        const forwardConfig = {
-            srcHost: '127.0.0.1',
-            srcPort: 3306,
-            dstHost: dbServer.host,
-            dstPort: dbServer.port
-        };
-
-        const sshClient = new Client();
-        connectionMysql = new Promise((resolve, reject) => {
-            sshClient.on('ready', () => {
-                sshClient.forwardOut(
-                    forwardConfig.srcHost,
-                    forwardConfig.srcPort,
-                    forwardConfig.dstHost,
-                    forwardConfig.dstPort,
-                    (err, stream) => {
-                        if (err) reject(err);
-                        const updatedDbServer = {
-                            ...{
-                                ...dbServer,
-                                database: process.env.DATABASE,
-                                multipleStatements: true,
-                            },
-                            stream
-                        };
-                        const connection = mysql.createConnection(updatedDbServer);
-                        connection.connect((error) => {
-                            if (error) {
-                                reject(error);
-                            }
-                            resolve(connection);
-                        });
-                    });
-            }).connect(tunnelConfig);
+            privateKey: fs.readFileSync('C:/Users/coto-/.ssh/id_ed25519'),
         });
-    }
-    else {
-        connectionMysql = new Promise((resolve, reject) => {
-            const connection = mysql.createConnection({
-                ...dbServer,
-                database: process.env.DATABASE
-            });
-            connection.connect((error) => {
-                if (error) {
-                    reject(error);
-                }
-                resolve(connection);
-            });
-        });
-    }
+    });
+}
 
-    function sql(query, values, callback) {
-        try {
-            connectionMysql.then((conn) => {
-                conn.query(query, values, (error, rows) => {
-                    callback({ error, rows });
-                });
-            });
-        }
-        catch (e) {
-            console.log(e);
-        }
+function sql(query, values, callback) {
+    if (!poolPromise) {
+        return callback({ error: new Error('DATABASE non configurée'), rows: null });
     }
-
+    poolPromise
+        .then((pool) => pool.query(query, values, (error, rows) => callback({ error, rows })))
+        .catch((error) => callback({ error, rows: null }));
 }
 
 module.exports = { sql };
