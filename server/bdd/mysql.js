@@ -66,9 +66,15 @@ function sql(query, values, callback) {
     }
     poolPromise
         .then((pool) => {
-            pool.query(query, values, (error, rows) => callback({ error, rows }));
+            pool.query(query, values, (error, rows) => {
+                if (error) console.error('[mysql]', error.code, error.message);
+                callback({ error, rows });
+            });
         })
-        .catch((error) => callback({ error, rows: null }));
+        .catch((error) => {
+            console.error('[mysql pool]', error.code, error.message);
+            callback({ error, rows: null });
+        });
 }
 
 module.exports = { sql };
