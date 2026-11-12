@@ -40,12 +40,12 @@ module.exports = class Request {
         alert: null,
         value: null,
       };
-      const currentDateTime = new Date().addHours(2).toISOString().slice(0, 10).replace("T", " ");
+      const currentDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
       const query = `
         SELECT Id, Midday_starter, Midday_dish, Midday_dessert, Afternoon_starter, Afternoon_dish, Afternoon_dessert, Day
         FROM Menus WHERE Id_company = ? AND Day = ?;
       `;
-      await this.connectionMysql.sql(query, [parseInt(id), currentDateTime], (result) => {
+      await this.connectionMysql.sql(query, [parseInt(id), currentDate], (result) => {
         const row = (result.rows && result.rows.length) ? result.rows[0] : null;
         if (row) {
           info.value = {
