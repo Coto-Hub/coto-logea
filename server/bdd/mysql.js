@@ -65,7 +65,9 @@ function sql(query, values, callback) {
         return callback({ error: new Error('DATABASE non configurée'), rows: null });
     }
     poolPromise
-        .then((pool) => pool.query(query, values, (error, rows) => callback({ error, rows })))
+        .then((pool) => {
+            pool.query(query, values, (error, rows) => callback({ error, rows }));
+        })
         .catch((error) => callback({ error, rows: null }));
 }
 
